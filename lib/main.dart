@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:velitt/screens/home_screen.dart'; 
 import 'package:velitt/screens/profile_information_screen.dart';
@@ -11,7 +12,10 @@ import 'package:velitt/screens/wallet_screen.dart';
 import 'package:velitt/screens/coupons_screen.dart';
 import 'package:velitt/screens/challenges_screen.dart'; // Import the new screen
 
+import 'package:velitt/screens/logger.dart';
+
 void main() {
+  setupLogging();
   runApp(const MyApp());
 }
 

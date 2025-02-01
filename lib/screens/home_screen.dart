@@ -48,10 +48,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: backgroundColor,
+                // color: backgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Image.asset(iconPath, width: 40, height: 40, color: Colors.white),
+              child: Image.asset(iconPath, width: 80, height: 80),
             ),
             const SizedBox(height: 8),
             Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
