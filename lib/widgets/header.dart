@@ -54,7 +54,7 @@ class HeaderWidget extends StatelessWidget {
                       border: Border.all(color: Colors.white, width: 2),
                     ),
                     child: ClipOval(
-                      child: Image.network(
+                      child: Image.asset(
                         profileImage,
                         fit: BoxFit.cover,
                       ),

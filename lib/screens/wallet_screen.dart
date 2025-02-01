@@ -1,11 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:velitt/state/member_state.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
+import 'package:velitt/services/wallet_service.dart'; // Import the API service
+import 'package:logging/logging.dart';
 
-class WalletScreen extends StatelessWidget {
+class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
+
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen> {
+  double _balance = 0;
+  List<dynamic> _transactions = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  final Logger _logger = Logger('WalletScreen');
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch wallet data when the screen is initialized
+    final memberState = Provider.of<MemberState>(context, listen: false);
+    _fetchWalletData(memberState.memberId.toString());
+  }
+
+  // Fetch wallet balance and history
+  Future<void> _fetchWalletData(String memberId) async {
+    try {
+      final balanceResponse = await WalletApiService.fetchBalance(memberId);
+      final historyResponse = await WalletApiService.fetchHistory(memberId);
+      _logger.info('balanceResponse: ${balanceResponse.toString()}');
+
+      // Update member state with new data
+
+      setState(() {
+        _balance = balanceResponse['balance'] as double;
+        _transactions = historyResponse['transactions'];
+        _isLoading = false;
+      });
+      _logger.info('${balanceResponse['balance']} coins in wallet');
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load wallet data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Handle redeem coins
+  Future<void> _redeemCoins(int memberId, int couponId) async {
+    try {
+      final response = await WalletApiService.redeemCoins(memberId, couponId);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'])),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to redeem coins')),
+      );
+    }
+  }
 
   void _handleNavigation(BuildContext context, int index) {
     switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
       case 1:
         Navigator.pushReplacementNamed(context, '/dashboard');
         break;
@@ -17,6 +81,7 @@ class WalletScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final MemberState memberState = Provider.of<MemberState>(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -50,9 +115,9 @@ class WalletScreen extends StatelessWidget {
                         height: 40,
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        '150',
-                        style: TextStyle(
+                      Text(
+                        '$_balance',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 48,
                           fontWeight: FontWeight.bold,
@@ -105,160 +170,119 @@ class WalletScreen extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Text(
-                            'Wallet History',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _errorMessage.isNotEmpty
+                        ? Center(
+                            child: Text(
+                              _errorMessage,
+                              style: const TextStyle(color: Colors.red),
                             ),
-                          ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: () {
-                              // Handle Excel download
-                            },
-                            icon: const Icon(Icons.file_download),
-                            label: const Text('Download Excel'),
-                          ),
-                          PopupMenuButton<String>(
-                            onSelected: (value) {
-                              // Handle filter selection
-                            },
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(
-                                value: 'today',
-                                child: Text('Today'),
+                          )
+                        : Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    const Text(
+                                      'Wallet History',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        // Handle Excel download
+                                      },
+                                      icon: const Icon(Icons.file_download),
+                                      label: const Text('Download Excel'),
+                                    ),
+                                    PopupMenuButton<String>(
+                                      onSelected: (value) {
+                                        // Handle filter selection
+                                      },
+                                      itemBuilder: (context) => [
+                                        const PopupMenuItem(
+                                          value: 'today',
+                                          child: Text('Today'),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'week',
+                                          child: Text('This Week'),
+                                        ),
+                                        const PopupMenuItem(
+                                          value: 'month',
+                                          child: Text('This Month'),
+                                        ),
+                                      ],
+                                      child: const Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text(
+                                          'Filter By Date',
+                                          style: TextStyle(color: Colors.black),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const PopupMenuItem(
-                                value: 'week',
-                                child: Text('This Week'),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                color: Colors.black87,
+                                child: const Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Number of Coins',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Date',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Time',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Event',
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              const PopupMenuItem(
-                                value: 'month',
-                                child: Text('This Month'),
+                              Expanded(
+                                child: ListView(
+                                  children: _transactions.map((transaction) {
+                                    return _TransactionItem(
+                                      coins: transaction['coins'].toString(),
+                                      date: transaction['date'],
+                                      time: transaction['time'],
+                                      event: transaction['event'],
+                                    );
+                                  }).toList(),
+                                ),
                               ),
                             ],
-                            child: const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text(
-                                'Filter By Date',
-                                style: TextStyle(color: Colors.black),
-                              ),
-                            ),
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      color: Colors.grey[200],
-                      child: const Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              'Number of Coins',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              'Date',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              'Time',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              'Event',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        children: const [
-                          _TransactionItem(
-                            coins: '798',
-                            date: '1/15/12',
-                            time: '07:38 am',
-                            event: 'Barone LLC.',
-                          ),
-                          _TransactionItem(
-                            coins: '130',
-                            date: '6/19/14',
-                            time: '07:13 pm',
-                            event: 'Acme Co.',
-                          ),
-                          _TransactionItem(
-                            coins: '922',
-                            date: '5/19/12',
-                            time: '02:30 pm',
-                            event: 'Abstergo Ltd.',
-                          ),
-                          _TransactionItem(
-                            coins: '177',
-                            date: '9/4/12',
-                            time: '01:09 am',
-                            event: 'Binford Ltd.',
-                          ),
-                          _TransactionItem(
-                            coins: '556',
-                            date: '7/11/19',
-                            time: '01:08 pm',
-                            event: 'Biffco Ent.',
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.first_page),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.navigate_before),
-                            onPressed: () {},
-                          ),
-                          _PageNumber(number: '1', isActive: true),
-                          _PageNumber(number: '2'),
-                          _PageNumber(number: '3'),
-                          _PageNumber(number: '4'),
-                          _PageNumber(number: '5'),
-                          IconButton(
-                            icon: const Icon(Icons.navigate_next),
-                            onPressed: () {},
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.last_page),
-                            onPressed: () {},
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ),
             BottomNavBar(
@@ -288,61 +312,62 @@ class _TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+        color: Colors.white, // Solid background for contrast
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Expanded(
             flex: 2,
-            child: Text(coins),
+            child: Text(
+              coins,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
           ),
           Expanded(
             flex: 2,
-            child: Text(date),
+            child: Text(
+              date,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
           ),
           Expanded(
             flex: 2,
-            child: Text(time),
+            child: Text(
+              time,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+            ),
           ),
           Expanded(
             flex: 2,
-            child: Text(event),
+            child: Text(
+              event,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PageNumber extends StatelessWidget {
-  final String number;
-  final bool isActive;
-
-  const _PageNumber({
-    required this.number,
-    this.isActive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFE31E24) : Colors.grey[300],
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text(
-          number,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
       ),
     );
   }

@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:velitt/widgets/bottom_navbar.dart'; // Import the BottomNavBar widget
+import 'package:velitt/widgets/header.dart';
+import 'package:velitt/state/member_state.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -63,87 +67,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final MemberState memberState = Provider.of<MemberState>(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              height: 200,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(30),
-                  bottomRight: Radius.circular(30),
-                ),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: -100,
-                    top: -50,
-                    child: Container(
-                      width: 300,
-                      height: 300,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFE31E24),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: ClipOval(
-                              child: Image.network(
-                                'https://placeholder.com/60x60',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 15),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Text(
-                                'Dashboard',
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              Text(
-                                'Ejaz Uddin',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Spacer(),
-                          const Icon(
-                            Icons.settings,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            HeaderWidget(
+              title: 'Dashboard',
+              memberName: memberState.memberName ?? 'None',
+              // profileImage: memberState.profileImage ?? 'https://via.placeholder.com/160',
+              profileImage: 'https://via.placeholder.com/160',
             ),
             Expanded(
               child: GridView.count(

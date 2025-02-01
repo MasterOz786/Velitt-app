@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
 import 'package:logging/logging.dart';
+import 'package:velitt/widgets/header.dart';
+import 'package:velitt/state/member_state.dart';
 
 class MemberDashboardScreen extends StatefulWidget {
   const MemberDashboardScreen({super.key});
@@ -68,7 +71,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
           _isLoading = false;
         });
       }
-      _logger.fine('Parameters: $_parameters');
     } catch (e, s) {
       _logger.severe('Error fetching parameters', e, s);
       setState(() {
@@ -351,6 +353,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final MemberState memberState = Provider.of<MemberState>(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: _isLoading
@@ -364,88 +367,11 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                 )
               : Column(
                   children: [
-                    // Header Section
-                    Container(
-                      height: 200,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1A1A1A),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(30),
-                          bottomRight: Radius.circular(30),
-                        ),
-                      ),
-                      child: Stack(
-                        children: [
-                          const Positioned(
-                            right: -100,
-                            top: -50,
-                            child: SizedBox(
-                              width: 300,
-                              height: 300,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFE31E24),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SafeArea(
-                            child: Padding(
-                              padding: const EdgeInsets.all(20),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white,
-                                        width: 2,
-                                      ),
-                                    ),
-                                    child: ClipOval(
-                                      child: Image.network(
-                                        'https://placeholder.com/60x60',
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 15),
-                                  const Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        'Dashboard',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Ejaz Uddin',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.white70,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const Spacer(),
-                                  const Icon(
-                                    Icons.settings,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    HeaderWidget(
+                      title: 'Dashboard',
+                      memberName: memberState.memberName ?? 'None',
+                      // profileImage: memberState.profileImage ?? 'https://via.placeholder.com/160',
+                      profileImage: 'https://via.placeholder.com/160',
                     ),
                     // Charts Section
                     Expanded(

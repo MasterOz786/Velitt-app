@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
+import 'package:velitt/state/member_state.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -20,6 +22,7 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final MemberState memberState = Provider.of<MemberState>(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -47,8 +50,8 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Ejaz Uddin',
+                  Text(
+                    memberState.memberName ?? 'None',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -56,11 +59,11 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'ejazuddin@example.com',
-                    style: TextStyle(
+                  Text(
+                    memberState.memberEmail ?? 'None',
+                    style: const TextStyle(
                       fontSize: 16,
-                      color: Colors.white70,
+                      color: Color.fromARGB(179, 194, 168, 168),
                     ),
                   ),
                   const SizedBox(height: 32),

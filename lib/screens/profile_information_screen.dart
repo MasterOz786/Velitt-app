@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
+import 'package:velitt/state/member_state.dart';
 
 class ProfileInformationScreen extends StatelessWidget {
   const ProfileInformationScreen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final MemberState memberState = Provider.of<MemberState>(context);
     return Scaffold(
       backgroundColor: Colors.black,
       body: Column(
@@ -77,8 +80,8 @@ class ProfileInformationScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 15),
-                  const Text(
-                    'Ejaz Uddin',
+                  Text(
+                    memberState.memberName ?? 'None',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 22,
@@ -86,8 +89,8 @@ class ProfileInformationScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  const Text(
-                    'Member ID: VLT12345',
+                  Text(
+                    'Member ID: ${memberState.memberId ?? 'None'}',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 16,
