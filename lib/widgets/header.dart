@@ -4,14 +4,12 @@ class HeaderWidget extends StatelessWidget {
   final String title;
   final String memberName;
   final String profileImage;
-  final VoidCallback? onSettingsTap;
 
   const HeaderWidget({
     Key? key,
     required this.title,
     required this.memberName,
     required this.profileImage,
-    this.onSettingsTap,
   }) : super(key: key);
 
   @override
@@ -89,7 +87,9 @@ class HeaderWidget extends StatelessWidget {
                       color: Colors.white,
                       size: 24,
                     ),
-                    onPressed: onSettingsTap,
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/personal_information');
+                    },
                   ),
                 ],
               ),
