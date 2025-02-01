@@ -1,6 +1,6 @@
-
 import 'package:flutter/material.dart';
-import 'package:velitt/screens/home_screen.dart'; 
+import 'package:provider/provider.dart';
+import 'package:velitt/screens/home_screen.dart';
 import 'package:velitt/screens/profile_information_screen.dart';
 import 'package:velitt/screens/splash_screen.dart';
 import 'package:velitt/theme/app_theme.dart';
@@ -10,13 +10,20 @@ import 'package:velitt/screens/member_dashboard_screen.dart';
 import 'package:velitt/screens/profile_screen.dart';
 import 'package:velitt/screens/wallet_screen.dart';
 import 'package:velitt/screens/coupons_screen.dart';
-import 'package:velitt/screens/challenges_screen.dart'; // Import the new screen
-
+import 'package:velitt/screens/challenges_screen.dart';
+import 'package:velitt/state/member_state.dart';
 import 'package:velitt/screens/logger.dart';
 
 void main() {
+  // Setup your logging before running the app.
   setupLogging();
-  runApp(const MyApp());
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => MemberState(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {

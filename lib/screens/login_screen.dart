@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:logging/logging.dart';
+import 'package:provider/provider.dart';
 import 'package:velitt/screens/forgot_password_screen.dart';
 import 'package:velitt/screens/home_screen.dart';
-import 'package:velitt/screens/member_dashboard_screen.dart';
+import 'package:velitt/state/member_state.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,13 +15,93 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final Logger _logger = Logger('LoginScreen');
+
+  // Controllers for email and password fields
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
+  // Controls password field visibility
   bool _obscurePassword = true;
+
+  // Loading state to display a progress indicator
+  bool _isLoading = false;
+
+  // Error message to display login errors
+  String? _errorMessage;
+
+  // API endpoint for login – adjust the URL as needed (e.g., use 10.0.2.2 on Android emulator)
+  final String _loginUrl = 'http://localhost/api/users.php/login';
+
+  // Method to perform login API call
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    // Prepare JSON payload
+    final Map<String, String> payload = {
+      'email': email,
+      'password': password,
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse(_loginUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode(payload),
+      );
+
+      _logger.info('Login response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        // Update global member state using the Provider extension method.
+        context.read<MemberState>().updateMember(
+          id: data['user_id'].toString(),
+          email: data['email'],
+          name: data['username'],
+          image: data['profile_picture'],
+        );
+
+        // Navigate to HomeScreen (using pushReplacement to remove the login screen)
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        final data = json.decode(response.body);
+        setState(() {
+          _errorMessage = data['error'] ?? 'Login failed';
+        });
+      }
+    } catch (e) {
+      _logger.severe('Login error: $e');
+      setState(() {
+        _errorMessage = 'An error occurred. Please try again.';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    // Dispose controllers when not needed
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -58,23 +142,36 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              // Email TextField
               TextField(
                 controller: _emailController,
+                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   hintText: 'Email Address',
-                  prefixIcon: Icon(Icons.email),
+                  hintStyle: TextStyle(color: Colors.white70),
+                  prefixIcon: Icon(Icons.email, color: Colors.white),
+                  enabledBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white54),
+                  ),
+                  focusedBorder: UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
+              // Password TextField
               TextField(
                 controller: _passwordController,
                 obscureText: _obscurePassword,
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Password',
-                  prefixIcon: const Icon(Icons.lock),
+                  hintStyle: const TextStyle(color: Colors.white70),
+                  prefixIcon: const Icon(Icons.lock, color: Colors.white),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      color: Colors.white,
                     ),
                     onPressed: () {
                       setState(() {
@@ -82,9 +179,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       });
                     },
                   ),
+                  enabledBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white54),
+                  ),
+                  focusedBorder: const UnderlineInputBorder(
+                    borderSide: BorderSide(color: Colors.white),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
+              // Forgot Password Button
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -106,22 +210,31 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 24),
+              // Display error message (if any)
+              if (_errorMessage != null)
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                ),
+              // Log In Button (with loading indicator)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        // builder: (context) => const MemberDashboardScreen(),
-                        builder: (context) => const HomeScreen(),
-                      ),
-                    );
-                  },
-                  child: const Text('Log In'),
+                  onPressed: _isLoading ? null : _login,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Log In'),
                 ),
               ),
               const Spacer(),
+              // Restart App Button (implementation pending)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
