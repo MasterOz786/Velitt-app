@@ -7,6 +7,7 @@ import 'package:velitt/screens/member_dashboard_screen.dart';
 import 'package:velitt/screens/profile_screen.dart';
 import 'package:velitt/screens/wallet_screen.dart';
 import 'package:velitt/screens/coupons_screen.dart';
+import 'package:velitt/screens/challenges_screen.dart'; // Import the new screen
 
 void main() {
   runApp(const MyApp());
@@ -28,6 +29,7 @@ class MyApp extends StatelessWidget {
         '/profile': (context) => const ProfileScreen(),
         '/wallet': (context) => const WalletScreen(),
         '/coupons': (context) => const CouponsScreen(),
+        '/challenges': (context) => const ChallengesScreen(), // Add this line
       },
       debugShowCheckedModeBanner: false,
     );

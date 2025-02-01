@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:velitt/screens/forgot_password_screen.dart';
+import 'package:velitt/screens/home_screen.dart';
 import 'package:velitt/screens/member_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -112,7 +113,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const MemberDashboardScreen(),
+                        // builder: (context) => const MemberDashboardScreen(),
+                        builder: (context) => const HomeScreen(),
                       ),
                     );
                   },
