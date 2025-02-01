@@ -32,6 +32,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   void _handleNavigation(int index) {
     switch (index) {
       case 0:
+        Navigator.pushNamed(context, '/home');
+        break;
+      case 1:
         // Already on dashboard, no need to navigate
         break;
       case 2:

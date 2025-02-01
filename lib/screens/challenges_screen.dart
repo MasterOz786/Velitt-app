@@ -19,87 +19,104 @@ class _ChallengesScreenState extends State<ChallengesScreen> {
 
   String weeklyThoughts = '';
 
+  void _handleNavigation(int index) {
+    switch (index) {
+      case 0:
+        Navigator.pushNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushNamed(context, '/member_dashboard');
+        break;
+      case 2:
+        Navigator.pushNamed(context, '/profile');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Velitt Challenges',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Velitt Challenges',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'This Week',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    ..._buildTasks(),
+                    const SizedBox(height: 32),
+                    const Text(
+                      'Weekly Thoughts',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      onChanged: (value) {
+                        setState(() {
+                          weeklyThoughts = value;
+                        });
+                      },
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Share your weekly thoughts here..',
+                        fillColor: Colors.grey[800],
+                        filled: true,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    const Text(
+                      'Progress Images',
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Save changes logic
+                      },
+                      child: const Text('Save Changes'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE31E24),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'This Week',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white70,
-                ),
-              ),
-              const SizedBox(height: 32),
-              ..._buildTasks(),
-              const SizedBox(height: 32),
-              const Text(
-                'Weekly Thoughts',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white70,
-                ),
-              ),
-              TextField(
-                onChanged: (value) {
-                  setState(() {
-                    weeklyThoughts = value;
-                  });
-                },
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: 'Share your weekly thoughts here..',
-                  fillColor: Colors.grey[800],
-                  filled: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'Progress Images',
-                style: TextStyle(
-                  fontSize: 24,
-                  color: Colors.white70,
-                ),
-              ),
-              // Progress images logic to be implemented here
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  // Save changes logic
-                },
-                child: const Text('Save Changes'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE31E24),
-                ),
-              ),
-              const Spacer(),
-              BottomNavBar(
-                currentIndex: 3, // Assuming Challenges is the 4th item
-                onTap: (index) {
-                  // Handle navigation
-                },
-              ),
-            ],
-          ),
+            ),
+            BottomNavBar(
+              currentIndex: 3, // Assuming Challenges is the 4th item
+              onTap: _handleNavigation,
+            ),
+          ],
         ),
       ),
     );

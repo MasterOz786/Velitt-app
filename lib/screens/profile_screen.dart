@@ -7,6 +7,8 @@ class ProfileScreen extends StatelessWidget {
   void _handleNavigation(BuildContext context, int index) {
     switch (index) {
       case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
       case 1:
         Navigator.pushReplacementNamed(context, '/dashboard');
         break;
@@ -65,6 +67,9 @@ class ProfileScreen extends StatelessWidget {
                   _buildProfileOption(
                     icon: Icons.person_outline,
                     title: 'Personal Information',
+                    onTap: () {
+                      Navigator.pushReplacementNamed(context, '/personal_information');
+                    },
                   ),
                   _buildProfileOption(
                     icon: Icons.notifications_outlined,

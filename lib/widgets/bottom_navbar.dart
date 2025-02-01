@@ -31,15 +31,15 @@ class BottomNavBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem('Home', Icons.home_outlined, 0),
-          _buildNavItem('Dashboard', Icons.dashboard_outlined, 1),
-          _buildNavItem('Profile', Icons.person_outline, 2),
+          _buildNavItem('Home', 'assets/icons/Home.png', 0),
+          _buildNavItem('Dashboard', 'assets/icons/Dashboard.png', 1),
+          _buildNavItem('Profile', 'assets/icons/Profile.png', 2),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(String label, IconData icon, int index) {
+  Widget _buildNavItem(String label, String iconPath, int index) {
     final bool isActive = currentIndex == index;
     return InkWell(
       onTap: () => onTap(index),
@@ -53,10 +53,11 @@ class BottomNavBar extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 24,
+            Image.asset(
+              iconPath,
+              // color: Colors.white, // Apply white tint to match theme
+              width: 48,
+              height: 48,
             ),
             const SizedBox(height: 4),
             Text(

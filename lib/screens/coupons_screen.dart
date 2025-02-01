@@ -47,8 +47,8 @@ class CouponsScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.network(
-                        'https://raw.githubusercontent.com/your-repo/assets/main/coin_icon.png',
+                      Image.asset(
+                        'assets/images/coin_green.png',
                         width: 40,
                         height: 40,
                       ),
@@ -62,8 +62,8 @@ class CouponsScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Image.network(
-                        'https://raw.githubusercontent.com/your-repo/assets/main/mascot.png',
+                      Image.asset(
+                        'assets/images/mascot.png',
                         width: 60,
                         height: 60,
                       ),
@@ -86,23 +86,23 @@ class CouponsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 children: const [
                   _CouponCard(
-                    logo: 'https://raw.githubusercontent.com/your-repo/assets/main/digicel_logo.png',
+                    logo: 'assets/images/coupons/digicel.png',
                     name: 'Digicel',
                   ),
                   _CouponCard(
-                    logo: 'https://raw.githubusercontent.com/your-repo/assets/main/chippie_logo.png',
+                    logo: 'assets/images/coupons/chippie.png',
                     name: 'Chippie',
                   ),
                   _CouponCard(
-                    logo: 'https://raw.githubusercontent.com/your-repo/assets/main/kla_logo.png',
+                    logo: 'assets/images/coupons/klamobile.png',
                     name: 'Kla Mobile',
                   ),
                   _CouponCard(
-                    logo: 'https://raw.githubusercontent.com/your-repo/assets/main/digicel_logo.png',
+                    logo: 'assets/images/coupons/digicel.png',
                     name: 'Digicel',
                   ),
                   _CouponCard(
-                    logo: 'https://raw.githubusercontent.com/your-repo/assets/main/pagatinu_logo.png',
+                    logo: 'assets/images/coupons/pagatinu.png',
                     name: 'Pagatinu',
                   ),
                 ],
@@ -139,7 +139,7 @@ class _CouponCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Image.network(
+          Image.asset(
             logo,
             height: 40,
             fit: BoxFit.contain,

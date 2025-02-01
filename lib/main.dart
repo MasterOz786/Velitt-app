@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:velitt/screens/home_screen.dart'; 
+import 'package:velitt/screens/profile_information_screen.dart';
 import 'package:velitt/screens/splash_screen.dart';
 import 'package:velitt/theme/app_theme.dart';
 import 'package:velitt/screens/login_screen.dart';
@@ -23,13 +25,15 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       home: const SplashScreen(),
       routes: {
+        '/home': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
+        '/personal_information': (context) => const ProfileInformationScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/member_dashboard': (context) => const MemberDashboardScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/wallet': (context) => const WalletScreen(),
         '/coupons': (context) => const CouponsScreen(),
-        '/challenges': (context) => const ChallengesScreen(), // Add this line
+        '/challenges': (context) => const ChallengesScreen(),
       },
       debugShowCheckedModeBanner: false,
     );

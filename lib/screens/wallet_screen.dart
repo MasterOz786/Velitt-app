@@ -44,8 +44,8 @@ class WalletScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.network(
-                        'https://raw.githubusercontent.com/your-repo/assets/main/coin_icon.png',
+                      Image.asset(
+                        'assets/images/coin_green.png',
                         width: 40,
                         height: 40,
                       ),
@@ -59,8 +59,8 @@ class WalletScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Image.network(
-                        'https://raw.githubusercontent.com/your-repo/assets/main/mascot.png',
+                      Image.asset(
+                        'assets/images/mascot.png',
                         width: 60,
                         height: 60,
                       ),
