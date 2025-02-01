@@ -13,15 +13,17 @@ class MemberDashboardScreen extends StatefulWidget {
 }
 
 class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
-  // Expanded/collapsed states for categories and charts
+  // Logger for debugging purposes
+  final Logger _logger = Logger('MemberDashboardScreen');
+
+  // Category expanded/collapsed states
   final Map<String, bool> _categoryExpanded = {
     'Physical Measurements': true,
     'Body Composition': false,
     'Laboratory Tests': false,
   };
 
-  final Logger _logger = Logger('MemberDashboardScreen');
-
+  // Chart expanded/collapsed states
   final Map<String, bool> _chartExpanded = {
     'Weight': true,
     'Height': false,
@@ -35,7 +37,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     'Hemoglobin': false,
   };
 
-  // This will hold the API parameters data (e.g. for BMI, bodyFat, etc.)
+  // Holds API parameters data (e.g. for BMI, bodyFat, etc.)
   Map<String, dynamic> _parameters = {};
   bool _isLoading = true;
   String _errorMessage = '';
@@ -50,6 +52,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   Future<void> _fetchParameters() async {
     _logger.fine('Fetching parameters from API');
     try {
+      // Note: If testing on an emulator, use 10.0.2.2 instead of localhost.
       final response = await http.get(
         Uri.parse('http://localhost/api/members.php/parameters/121'),
       );
@@ -65,7 +68,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+      _logger.fine('Parameters: $_parameters');
+    } catch (e, s) {
+      _logger.severe('Error fetching parameters', e, s);
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
@@ -138,78 +143,77 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     );
   }
 
-  /// _buildChart builds a chart widget for a given title.
-  /// It first checks if API data is available for the given title (matching the JSON key).
-  /// If so, it converts that data into a list of FlSpot objects.
-  /// Otherwise, it falls back to hardcoded sample data.
+  /// Converts API data into chart spots or uses fallback sample data.
   Widget _buildChart(String title) {
     List<FlSpot> spots = [];
     // Map chart titles to corresponding JSON keys:
     String key;
     switch (title) {
       case 'Weight':
-        key = 'bodyWeight';
+        key = 'bodyweight';
         break;
       case 'Height':
         key = 'height';
         break;
-      case 'Blood Pressure':
-        key = 'blood_pressure';
-        break;
-      case 'Pulse':
-        key = 'pulse';
+      case 'BMI':
+        key = 'BMI';
         break;
       case 'Body Fat':
         key = 'bodyFat';
         break;
+      case 'Blood Pressure':
+        key = 'blood_pressure';
+        break;
+      case 'Fat Free Body Weight':
+        key = 'FFBweight';
+        break;
+      case 'Body Water':
+        key = 'bodywater';
+        break;
       case 'Muscle Mass':
-        key = 'muscleMass';
+        key = 'musclemass';
         break;
-      case 'BMI':
-        key = 'BMI';
+      case 'Protein':
+        key = 'protein';
         break;
-      case 'Blood Sugar':
+      case 'Pulse':
+        key = 'pulse';
+        break;
+      case 'Glucose':
         key = 'glucose';
+        break;
+      case 'Cholesterol':
+        key = 'cholesterol';
         break;
       default:
         key = title;
         break;
     }
 
-    // If the key exists in the parameters and has data, create spots.
+    // Generate chart spots from API data if available, otherwise use fallback
     if (_parameters.containsKey(key)) {
       var dataList = _parameters[key] as List;
       if (dataList.isNotEmpty) {
         for (var i = 0; i < dataList.length; i++) {
           double value;
           try {
-            value = double.parse(dataList[i]['value'].toString());
+            // If blood pressure data is in a list format
+            if (dataList[i]['value'] is List) {
+              value = double.parse(dataList[i]['value'][0].toString());
+            } else {
+              value = double.parse(dataList[i]['value'].toString());
+            }
           } catch (e) {
+            _logger.warning('Error parsing value for $key at index $i: $e');
             value = 0;
           }
           spots.add(FlSpot(i.toDouble(), value));
         }
       } else {
-        // If the list exists but is empty, use fallback data.
-        spots = const [
-          FlSpot(0, 42),
-          FlSpot(1, 41.8),
-          FlSpot(2, 41.2),
-          FlSpot(3, 41),
-          FlSpot(4, 41.5),
-          FlSpot(5, 43),
-        ];
+        spots = _fallbackSpots();
       }
     } else {
-      // Use fallback hardcoded data if no API data exists.
-      spots = const [
-        FlSpot(0, 42),
-        FlSpot(1, 41.8),
-        FlSpot(2, 41.2),
-        FlSpot(3, 41),
-        FlSpot(4, 41.5),
-        FlSpot(5, 43),
-      ];
+      spots = _fallbackSpots();
     }
 
     return Column(
@@ -263,18 +267,14 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                   drawVerticalLine: true,
                   horizontalInterval: 1,
                   verticalInterval: 1,
-                  getDrawingHorizontalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey.shade300,
-                      strokeWidth: 1,
-                    );
-                  },
-                  getDrawingVerticalLine: (value) {
-                    return FlLine(
-                      color: Colors.grey.shade300,
-                      strokeWidth: 1,
-                    );
-                  },
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.grey.shade300,
+                    strokeWidth: 1,
+                  ),
+                  getDrawingVerticalLine: (value) => FlLine(
+                    color: Colors.grey.shade300,
+                    strokeWidth: 1,
+                  ),
                 ),
                 titlesData: FlTitlesData(
                   show: true,
@@ -282,28 +282,40 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      getTitlesWidget: (value, meta) {
-                        return SideTitleWidget(
-                          meta: meta,
-                          child: Text('${value.toInt() + 1}', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                        );
-                      },
+                      getTitlesWidget: (value, meta) => SideTitleWidget(
+                        meta: meta,
+                        child: Text(
+                          '${value.toInt() + 1}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 40,
-                      getTitlesWidget: (value, meta) {
-                        return SideTitleWidget(
-                          meta: meta,
-                          child: Text(value.toInt().toString(), style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                        );
-                      },
+                      getTitlesWidget: (value, meta) => SideTitleWidget(
+                        meta: meta,
+                        child: Text(
+                          value.toInt().toString(),
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
@@ -313,7 +325,10 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     color: const Color(0xFFE31E24),
                     barWidth: 2,
                     dotData: FlDotData(show: true),
-                    belowBarData: BarAreaData(show: true, color: const Color(0xFFE31E24).withOpacity(0.1)),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: const Color(0xFFE31E24).withOpacity(0.1),
+                    ),
                   ),
                 ],
               ),
@@ -323,6 +338,17 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     );
   }
 
+  List<FlSpot> _fallbackSpots() {
+    return const [
+      FlSpot(0, 42),
+      FlSpot(1, 41.8),
+      FlSpot(2, 41.2),
+      FlSpot(3, 41),
+      FlSpot(4, 41.5),
+      FlSpot(5, 43),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -330,7 +356,12 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage.isNotEmpty
-              ? Center(child: Text(_errorMessage, style: const TextStyle(color: Colors.white)))
+              ? Center(
+                  child: Text(
+                    _errorMessage,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                )
               : Column(
                   children: [
                     // Header Section
@@ -345,15 +376,17 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                       ),
                       child: Stack(
                         children: [
-                          Positioned(
+                          const Positioned(
                             right: -100,
                             top: -50,
-                            child: Container(
+                            child: SizedBox(
                               width: 300,
                               height: 300,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFE31E24),
-                                shape: BoxShape.circle,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFE31E24),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
                           ),
@@ -367,7 +400,10 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                                     height: 60,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 2,
+                                      ),
                                     ),
                                     child: ClipOval(
                                       child: Image.network(
@@ -377,22 +413,33 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 15),
-                                  Column(
+                                  const Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
-                                    children: const [
+                                    children: [
                                       Text(
                                         'Dashboard',
-                                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                       Text(
                                         'Ejaz Uddin',
-                                        style: TextStyle(fontSize: 16, color: Colors.white70),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.white70,
+                                        ),
                                       ),
                                     ],
                                   ),
                                   const Spacer(),
-                                  const Icon(Icons.settings, color: Colors.white, size: 24),
+                                  const Icon(
+                                    Icons.settings,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
                                 ],
                               ),
                             ),
@@ -408,18 +455,20 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                           _buildCategory('Physical Measurements', [
                             'Weight',
                             'Height',
-                            'Blood Pressure',
-                            'Pulse',
                           ]),
                           _buildCategory('Body Composition', [
-                            'Body Fat',
-                            'Muscle Mass',
                             'BMI',
+                            'Body Fat',
+                            'Fat Free Body Weight',
+                            'Body Water',
+                            'Muscle Mass',
+                            'Protein',
+                            'Waist Circumference',
                           ]),
                           _buildCategory('Laboratory Tests', [
-                            'Blood Sugar',
-                            'Cholesterol',
-                            'Hemoglobin',
+                            'Blood Pressure',
+                            'Pulse',
+                            'Glucose'
                           ]),
                         ],
                       ),
