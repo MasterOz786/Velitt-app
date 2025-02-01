@@ -4,6 +4,9 @@ import 'package:velitt/theme/app_theme.dart';
 import 'package:velitt/screens/login_screen.dart';
 import 'package:velitt/screens/dashboard_screen.dart';
 import 'package:velitt/screens/member_dashboard_screen.dart';
+import 'package:velitt/screens/profile_screen.dart';
+import 'package:velitt/screens/wallet_screen.dart';
+import 'package:velitt/screens/coupons_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -19,10 +22,12 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       home: const SplashScreen(),
       routes: {
-        // '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/dashboard': (context) => const DashboardScreen(),
         '/member_dashboard': (context) => const MemberDashboardScreen(),
+        '/profile': (context) => const ProfileScreen(),
+        '/wallet': (context) => const WalletScreen(),
+        '/coupons': (context) => const CouponsScreen(),
       },
       debugShowCheckedModeBanner: false,
     );

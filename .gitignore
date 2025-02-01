@@ -52,3 +52,10 @@ app.*.map.json
 .metadata
 
 devtools_options.yaml
+
+windows
+web
+macos
+linux
+ios
+android

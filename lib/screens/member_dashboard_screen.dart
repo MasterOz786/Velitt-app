@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:velitt/widgets/bottom_navbar.dart';
 
 class MemberDashboardScreen extends StatefulWidget {
   const MemberDashboardScreen({super.key});
@@ -27,6 +28,17 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     'Cholesterol': false,
     'Hemoglobin': false,
   };
+
+  void _handleNavigation(int index) {
+    switch (index) {
+      case 0:
+        // Already on dashboard, no need to navigate
+        break;
+      case 2:
+        Navigator.pushNamed(context, '/profile');
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,30 +149,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
             ),
           ),
           // Bottom Navigation
-          Container(
-            height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem('Home', Icons.home_outlined, false),
-                _buildNavItem('Dashboard', Icons.dashboard_outlined, true),
-                _buildNavItem('Profile', Icons.person_outline, false),
-              ],
-            ),
+          BottomNavBar(
+            currentIndex: 1,
+            onTap: _handleNavigation,
           ),
         ],
       ),
@@ -292,7 +283,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                       getTitlesWidget: (value, meta) {
                         return SideTitleWidget(
                           meta: meta,
-                          // axisSide: meta.axisSide,
                           child: Text(
                             '${value.toInt()}/10',
                             style: TextStyle(
@@ -310,7 +300,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                       reservedSize: 40,
                       getTitlesWidget: (value, meta) {
                         return SideTitleWidget(
-                          // axisSide: meta.axisSide,
                           meta: meta,
                           child: Text(
                             value.toInt().toString(),
@@ -355,35 +344,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildNavItem(String label, IconData icon, bool isActive) {
-    return Container(
-      width: 80,
-      height: 80,
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFE31E24) : Colors.transparent,
-        shape: BoxShape.circle,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            color: Colors.white,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
