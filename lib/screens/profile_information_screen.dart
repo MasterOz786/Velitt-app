@@ -88,14 +88,6 @@ class ProfileInformationScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: 5),
-                  Text(
-                    'Member ID: ${memberState.memberId ?? 'None'}',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
                 ],
               ),
             ),

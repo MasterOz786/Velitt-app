@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
           email: data['email'],
           name: data['username'],
           image: data['profile_picture'],
-          coins: data['coins'],
+          coins: double.parse(data['coins'].toString()),
         );
 
         // Navigate to HomeScreen (using pushReplacement to remove the login screen)

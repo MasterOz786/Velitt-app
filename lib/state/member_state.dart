@@ -30,4 +30,10 @@ class MemberState extends ChangeNotifier {
     memberCoins = coins;
     notifyListeners();
   }
+
+  // only update the coins
+  void updateCoins(double coins) {
+    memberCoins = coins;
+    notifyListeners();
+  }
 }

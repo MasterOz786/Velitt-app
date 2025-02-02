@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 class WalletApiService {
   static const String baseUrl = 'http://localhost/api/wallet.php';
+  static const String membersUrl = 'http://localhost/api/members.php';
 
   // Fetch wallet balance
   static Future<Map<String, dynamic>> fetchBalance(int memberId) async {
@@ -38,6 +39,21 @@ class WalletApiService {
       return json.decode(response.body);
     } else {
       throw Exception('Failed to redeem coins');
+    }
+  }
+
+  // updaet wallet balance
+  static Future<Map<String, dynamic>> updateBalance(int memberId, double coins) async {
+    final response = await http.put(
+      Uri.parse('$membersUrl/updateCoins'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({'member_id': memberId, 'coins': coins}),
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to update balance');
     }
   }
 }

@@ -1,18 +1,24 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+/// Custom exception that only returns a user-friendly message.
+class CouponException implements Exception {
+  final String message;
+  CouponException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class CouponApiService {
   static const String baseUrl = 'http://localhost/api/coupons.php';
 
-  // Fetch all coupons specific to the user
+  // Fetch coupons for a specific user
   static Future<List<dynamic>> fetchCoupons(int memberId) async {
-    // put member id in the request body
-    final response = await http.post(
+    // Put member id in the request body if needed (or adjust the endpoint)
+    final response = await http.get(
       Uri.parse(baseUrl),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({
-        'member_id': memberId,
-      }),
     );
 
     if (response.statusCode == 200) {
@@ -20,12 +26,13 @@ class CouponApiService {
       for (var i = 0; i < coupons.length; i++) {
         // Extract the filename from the path
         final String? path = coupons[i]['picture'];
-        final String? filename = path?.split('/').last; // Get the last part after the last slash final
-        coupons[i]['picture'] = filename; // Update the picture field with the filename
+        final String? filename = path?.split('/').last;
+        coupons[i]['picture'] = filename;
       }
       return coupons;
     } else {
-      throw Exception('Failed to fetch coupons');
+      // Throw a custom exception with a friendly message
+      throw CouponException('Failed to fetch coupons. Please try again later.');
     }
   }
 
@@ -36,14 +43,13 @@ class CouponApiService {
     if (response.statusCode == 200) {
       final coupons = json.decode(response.body);
       for (var i = 0; i < coupons.length; i++) {
-        // Extract the filename from the path
         final path = coupons[i]['picture'];
-        final filename = path.split('/').last; // Get the last part after the last slash
-        coupons[i]['picture'] = filename; // Update the picture field with the filename
+        final filename = path.split('/').last;
+        coupons[i]['picture'] = filename;
       }
       return coupons;
     } else {
-      throw Exception('Failed to fetch coupons');
+      throw CouponException('Failed to fetch coupons. Please try again later.');
     }
   }
 
@@ -67,7 +73,7 @@ class CouponApiService {
     if (response.statusCode == 200) {
       return json.decode(response.body);
     } else {
-      throw Exception('Failed to redeem coupon');
+      throw CouponException('Failed to redeem coupon. Please try again later.');
     }
   }
 }

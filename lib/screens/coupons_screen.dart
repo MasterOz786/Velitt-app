@@ -39,24 +39,31 @@ class _CouponsScreenState extends State<CouponsScreen> {
   @override
   void initState() {
     super.initState();
-    // You can use memberState here if needed.
     _fetchCoupons();
   }
 
   Future<void> _fetchCoupons() async {
     try {
       final coupons = await CouponApiService.fetchAllCoupons();
-      final c = await CouponApiService.fetchCoupons(121);
-      _logger.info(c);
-      setState(() {
-        _coupons = coupons;
-        _isLoading = false;
-      });
+      if (coupons == null || coupons.isEmpty) {
+        // When API returns empty data, show a friendly message.
+        setState(() {
+          _errorMessage = 'No coupons available at the moment.';
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _coupons = coupons;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load coupons: ${e.toString()}';
+        // Show a user-friendly error message.
+        _errorMessage = 'Failed to load coupons. Please try again later.';
         _isLoading = false;
       });
+      _logger.severe('Error fetching coupons', e);
     }
   }
 
@@ -80,9 +87,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
               );
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(response['message'])),
+                  SnackBar(
+                    content: Text(
+                      response['message'] ?? 'Coupon redeemed successfully.',
+                    ),
+                  ),
                 );
-                // Refresh wallet balance after redemption
+                // Refresh wallet balance after redemption.
                 memberState.updateMember(
                   id: response['user_id'],
                   email: response['email'],
@@ -94,9 +105,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(e.toString())),
+                  const SnackBar(
+                    content: Text(
+                        'Failed to redeem coupon. Please try again later.'),
+                  ),
                 );
               }
+              _logger.severe('Error redeeming coupon', e);
             }
           },
         ),
@@ -107,14 +122,18 @@ class _CouponsScreenState extends State<CouponsScreen> {
   /// Determines which redemption flow to use based on the coupon type.
   void _handleCouponRedeem(Map<String, dynamic> coupon) {
     // If coupon type is "Coins", navigate to the coin redemption screen.
-    if (coupon['type'].toLowerCase() == 'coins') {
-      _navigateToRedemption(int.parse(coupon['id']), coupon['type']);
+    if (coupon['type'].toString().toLowerCase() == 'coins') {
+      int couponId = int.tryParse(coupon['id'].toString()) ?? 0;
+      _navigateToRedemption(couponId, coupon['type']);
     } else {
       _showCouponRedeemDialog(coupon);
     }
   }
 
   /// Shows a popup dialog for coupons that require additional input.
+  ///
+  /// After the input is taken and the coupon is successfully redeemed,
+  /// the entire screen is replaced by the CoinRedemptionScreen.
   void _showCouponRedeemDialog(Map<String, dynamic> coupon) {
     final TextEditingController phoneController = TextEditingController();
     final TextEditingController bankNameController = TextEditingController();
@@ -207,10 +226,11 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 }
 
                 try {
-                  final memberState = Provider.of<MemberState>(context, listen: false);
-                  // Set redeemType using switch case
+                  final memberState =
+                      Provider.of<MemberState>(context, listen: false);
+                  // Determine redeemType.
                   String redeemType;
-                  switch (coupon['type'].toLowerCase()) {
+                  switch (coupon['type'].toString().toLowerCase()) {
                     case 'phone number':
                       redeemType = 'phone';
                       break;
@@ -227,24 +247,85 @@ class _CouponsScreenState extends State<CouponsScreen> {
                       redeemType = 'coins';
                       break;
                   }
+                  final int couponId =
+                      int.tryParse(coupon['id'].toString()) ?? 0;
                   final response = await CouponApiService.redeemCoupon(
                     memberId: memberState.memberId,
-                    couponId: int.parse(coupon['id']),
+                    couponId: couponId,
                     redeemType: redeemType,
                     additionalData: additionalData,
                   );
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(response['message'])),
+                      SnackBar(
+                        content: Text(
+                          response['message'] ??
+                              'Coupon redeemed successfully.',
+                        ),
+                      ),
                     );
-                    Navigator.pop(context);
+                    // After successful redemption, replace the CouponsScreen
+                    // with the CoinRedemptionScreen.
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CoinRedemptionScreen(
+                          couponId: couponId,
+                          couponType: coupon['type'],
+                          balance: memberState.memberCoins,
+                          onRedeem: (coins) async {
+                            try {
+                              _logger.info(
+                                  'Redeeming $coins coins for coupon $couponId');
+                              final resp = await CouponApiService.redeemCoupon(
+                                memberId: memberState.memberId,
+                                couponId: couponId,
+                                redeemType: coupon['type'],
+                                additionalData: {'coins': coins},
+                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      resp['message'] ??
+                                          'Coupon redeemed successfully.',
+                                    ),
+                                  ),
+                                );
+                                memberState.updateMember(
+                                  id: resp['user_id'],
+                                  email: resp['email'],
+                                  name: resp['username'],
+                                  image: resp['profile_picture'],
+                                  coins: double.parse(resp['coins']),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Failed to redeem coupon. Please try again later.'),
+                                  ),
+                                );
+                              }
+                              _logger.severe('Error redeeming coupon', e);
+                            }
+                          },
+                        ),
+                      ),
+                    );
                   }
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString())),
+                      const SnackBar(
+                        content: Text(
+                            'Failed to redeem coupon. Please try again later.'),
+                      ),
                     );
                   }
+                  _logger.severe('Error redeeming coupon', e);
                 }
               },
               child: const Text('Request'),
@@ -282,7 +363,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Centered Row for Coins and Mascot
                   Center(
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -336,9 +416,11 @@ class _CouponsScreenState extends State<CouponsScreen> {
                           padding: const EdgeInsets.all(16),
                           children: _coupons.map((coupon) {
                             // Convert coupon to a Map<String, dynamic>
-                            final couponMap = Map<String, dynamic>.from(coupon);
+                            final couponMap =
+                                Map<String, dynamic>.from(coupon);
                             return _CouponCard(
-                              logo: 'assets/images/coupons/${couponMap['picture']}',
+                              logo:
+                                  'assets/images/coupons/${couponMap['picture']}',
                               name: couponMap['name'],
                               onRedeem: () => _handleCouponRedeem(couponMap),
                             );

@@ -11,8 +11,8 @@ import 'package:logging/logging.dart';
 class CoinRedemptionScreen extends StatefulWidget {
   final int couponId;
   final String couponType;
-  final double balance; // Still passed in if needed elsewhere
-  final Function(double) onRedeem; // Changed to double
+  final double balance;
+  final Function(double) onRedeem;
 
   const CoinRedemptionScreen({
     super.key,
@@ -46,19 +46,61 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
     }
   }
 
+  /// Calls the update balance endpoint and updates the MemberState.
+  Future<void> _updateBalance(double redeemedCoins) async {
+    final memberState = Provider.of<MemberState>(context, listen: false);
+    try {
+      // Calculate the new balance.
+      double newBalance = memberState.memberCoins - redeemedCoins;
+      // Call your update endpoint.
+      final response = await WalletApiService.updateBalance(memberState.memberId, newBalance);
+      // Update local MemberState. Adjust the keys based on your response.
+      memberState.updateCoins(
+        newBalance,
+      );
+      _logger.info('Member coins updated to ${newBalance}');
+    } catch (e) {
+      _logger.severe('Error updating balance: $e');
+      // Optionally show a snackbar if needed:
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update wallet balance.')),
+      );
+    }
+  }
+
+  /// Shows a modal dialog with a congratulatory image, updates the wallet balance, then dismisses the screen.
+  Future<void> _showCongratulations(double redeemedCoins) async {
+    // First update the member coins on the backend.
+    await _updateBalance(redeemedCoins);
+
+    // Show the congratulatory image.
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Image.asset('assets/images/congratulations.png'),
+      ),
+    );
+    // Display the image for 2 seconds.
+    await Future.delayed(const Duration(seconds: 2));
+    // Close the congratulations dialog.
+    Navigator.of(context).pop();
+    // Quit the redemption screen.
+    Navigator.of(context).pop();
+  }
+
   /// Opens a modal dialog for predefined coupon cards.
   /// (This modal allows further custom entry if needed.)
-  void _showRedeemModal(BuildContext context) {
+  void _showRedeemModal(BuildContext context, double coins) {
     // Clear any previous text before opening the dialog.
     _customCoinsController.clear();
-    // Retrieve the member state here so we can use it in the validation.
     final memberState = Provider.of<MemberState>(context, listen: false);
 
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: Colors.black,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -70,14 +112,18 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                 const SizedBox(height: 16),
                 TextField(
                   controller: _customCoinsController,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  // Allow digits and a decimal point
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                   ],
+                  // Change the number color here (e.g., to white)
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                   decoration: InputDecoration(
-                    hintText: 'Enter Number of coins',
+                    hintText: 'Enter number of coins',
                     hintStyle: const TextStyle(color: Colors.grey),
                     filled: true,
                     fillColor: Colors.grey[200],
@@ -85,8 +131,7 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -95,31 +140,31 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                   child: ElevatedButton(
                     onPressed: () {
                       if (_customCoinsController.text.isNotEmpty) {
-                        double coins =
-                            double.tryParse(_customCoinsController.text) ?? 0;
-                        if (coins <= 0) {
-                          // Check for invalid (zero or negative) amount.
+                        double inputCoins = double.tryParse(_customCoinsController.text) ?? 0;
+                        if (inputCoins <= 0) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text('Please enter a valid amount'),
-                                showCloseIcon: true),
+                              content: Text('Please enter a valid amount'),
+                              showCloseIcon: true,
+                            ),
                           );
-                        } else if (coins > memberState.memberCoins) {
-                          // Insufficient balance.
+                        } else if (inputCoins > memberState.memberCoins) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text('Insufficient balance'),
-                                showCloseIcon: true),
+                              content: Text('Insufficient balance'),
+                              showCloseIcon: true,
+                            ),
                           );
                         } else {
-                          widget.onRedeem(coins);
-                          Navigator.pop(context);
+                          // Successful redemption using custom input.
+                          _showCongratulations(inputCoins);
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Please enter an amount'),
-                              showCloseIcon: true),
+                            content: Text('Please enter an amount'),
+                            showCloseIcon: true,
+                          ),
                         );
                       }
                     },
@@ -191,7 +236,7 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => _showRedeemModal(context),
+                onPressed: () => _showRedeemModal(context, coins),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE31E24),
                   shape: RoundedRectangleBorder(
@@ -217,9 +262,8 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final MemberState memberState =
-        Provider.of<MemberState>(context, listen: false);
-    // Filter available predefined coins by comparing them to the member's coin balance (which can be fractional).
+    final MemberState memberState = Provider.of<MemberState>(context, listen: false);
+    // Filter available predefined coins by comparing them to the member's coin balance.
     final List<double> availableCoins = predefinedCoins
         .where((coin) => coin <= memberState.memberCoins)
         .toList();
@@ -252,7 +296,7 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                   // Centered Row for Coins and Mascot
                   Center(
                     child: Row(
-                      mainAxisSize: MainAxisSize.min, // Center the row
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
                           'assets/images/coin_green.png',
@@ -301,6 +345,12 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
                     ],
+                    // Change the number color here (for example, to white)
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Enter Number of coins',
                       filled: true,
@@ -315,25 +365,31 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      // Custom input redemption is immediate
+                      // Custom input redemption is immediate.
                       onPressed: () {
                         if (_customCoinsController.text.isNotEmpty) {
-                          double coins =
-                              double.tryParse(_customCoinsController.text) ?? 0;
+                          double coins = double.tryParse(_customCoinsController.text) ?? 0;
                           if (coins <= 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please enter a valid amount')),
+                              const SnackBar(
+                                content: Text('Please enter a valid amount'),
+                              ),
                             );
                           } else if (coins > memberState.memberCoins) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Insufficient balance')),
+                              const SnackBar(
+                                content: Text('Insufficient balance'),
+                              ),
                             );
                           } else {
-                            widget.onRedeem(coins);
+                            // Pass the redeemed coins to _showCongratulations.
+                            _showCongratulations(coins);
                           }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Please enter an amount')),
+                            const SnackBar(
+                              content: Text('Please enter an amount'),
+                            ),
                           );
                         }
                       },

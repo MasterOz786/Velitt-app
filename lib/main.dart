@@ -9,6 +9,7 @@ import 'package:velitt/screens/dashboard_screen.dart';
 import 'package:velitt/screens/member_dashboard_screen.dart';
 import 'package:velitt/screens/profile_screen.dart';
 import 'package:velitt/screens/wallet_screen.dart';
+import 'package:velitt/screens/coins_screen.dart';
 import 'package:velitt/screens/coupons_screen.dart';
 import 'package:velitt/screens/challenges_screen.dart';
 import 'package:velitt/state/member_state.dart';
