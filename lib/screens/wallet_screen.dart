@@ -25,11 +25,11 @@ class _WalletScreenState extends State<WalletScreen> {
     super.initState();
     // Fetch wallet data when the screen is initialized
     memberState = Provider.of<MemberState>(context, listen: false);
-    _fetchWalletData(memberState.memberId.toString());
+    _fetchWalletData(memberState.memberId);
   }
 
   // Fetch wallet balance and history
-  Future<void> _fetchWalletData(String memberId) async {
+  Future<void> _fetchWalletData(int memberId) async {
     try {
       final historyResponse = await WalletApiService.fetchHistory(memberId);
 

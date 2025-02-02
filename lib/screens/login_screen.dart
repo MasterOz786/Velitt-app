@@ -61,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = json.decode(response.body);
         // Update global member state using the Provider extension method.
         context.read<MemberState>().updateMember(
-          id: data['user_id'].toString(),
+          id: int.parse(data['user_id'].toString()),
           email: data['email'],
           name: data['username'],
           image: data['profile_picture'],

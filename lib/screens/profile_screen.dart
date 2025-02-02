@@ -74,18 +74,18 @@ class ProfileScreen extends StatelessWidget {
                       Navigator.pushReplacementNamed(context, '/personal_information');
                     },
                   ),
-                  _buildProfileOption(
-                    icon: Icons.notifications_outlined,
-                    title: 'Notifications',
-                  ),
-                  _buildProfileOption(
-                    icon: Icons.security_outlined,
-                    title: 'Security',
-                  ),
-                  _buildProfileOption(
-                    icon: Icons.help_outline,
-                    title: 'Help & Support',
-                  ),
+                  // _buildProfileOption(
+                  //   icon: Icons.notifications_outlined,
+                  //   title: 'Notifications',
+                  // ),
+                  // _buildProfileOption(
+                  //   icon: Icons.security_outlined,
+                  //   title: 'Security',
+                  // ),
+                  // _buildProfileOption(
+                  //   icon: Icons.help_outline,
+                  //   title: 'Help & Support',
+                  // ),
                   _buildProfileOption(
                     icon: Icons.logout,
                     title: 'Logout',

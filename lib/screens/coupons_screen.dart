@@ -39,12 +39,15 @@ class _CouponsScreenState extends State<CouponsScreen> {
   @override
   void initState() {
     super.initState();
+    // You can use memberState here if needed.
     _fetchCoupons();
   }
 
   Future<void> _fetchCoupons() async {
     try {
-      final coupons = await CouponApiService.fetchCoupons();
+      final coupons = await CouponApiService.fetchAllCoupons();
+      final c = await CouponApiService.fetchCoupons(121);
+      _logger.info(c);
       setState(() {
         _coupons = coupons;
         _isLoading = false;
@@ -70,7 +73,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
             try {
               _logger.info('Redeeming $coins coins for coupon $couponId');
               final response = await CouponApiService.redeemCoupon(
-                memberId: int.tryParse(memberState.memberId ?? '') ?? 0,
+                memberId: memberState.memberId,
                 couponId: couponId,
                 redeemType: type,
                 additionalData: {'coins': coins},
@@ -81,7 +84,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 );
                 // Refresh wallet balance after redemption
                 memberState.updateMember(
-                  id: response['user_id'].toString(),
+                  id: response['user_id'],
                   email: response['email'],
                   name: response['username'],
                   image: response['profile_picture'],
@@ -98,6 +101,157 @@ class _CouponsScreenState extends State<CouponsScreen> {
           },
         ),
       ),
+    );
+  }
+
+  /// Determines which redemption flow to use based on the coupon type.
+  void _handleCouponRedeem(Map<String, dynamic> coupon) {
+    // If coupon type is "Coins", navigate to the coin redemption screen.
+    if (coupon['type'].toLowerCase() == 'coins') {
+      _navigateToRedemption(int.parse(coupon['id']), coupon['type']);
+    } else {
+      _showCouponRedeemDialog(coupon);
+    }
+  }
+
+  /// Shows a popup dialog for coupons that require additional input.
+  void _showCouponRedeemDialog(Map<String, dynamic> coupon) {
+    final TextEditingController phoneController = TextEditingController();
+    final TextEditingController bankNameController = TextEditingController();
+    final TextEditingController accountNumberController = TextEditingController();
+    final TextEditingController accountNameController = TextEditingController();
+    final TextEditingController emailController = TextEditingController();
+    final TextEditingController giftCardNumberController = TextEditingController();
+    final TextEditingController giftCardPinController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Redeem ${coupon['name']}'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (coupon['type'] == 'Phone Number')
+                  TextField(
+                    controller: phoneController,
+                    decoration: const InputDecoration(labelText: 'Phone Number'),
+                    keyboardType: TextInputType.phone,
+                  ),
+                if (coupon['type'] == 'Bank')
+                  Column(
+                    children: [
+                      TextField(
+                        controller: bankNameController,
+                        decoration: const InputDecoration(labelText: 'Bank Name'),
+                      ),
+                      TextField(
+                        controller: accountNumberController,
+                        decoration: const InputDecoration(labelText: 'Account Number'),
+                        keyboardType: TextInputType.number,
+                      ),
+                      TextField(
+                        controller: accountNameController,
+                        decoration: const InputDecoration(labelText: 'Account Name'),
+                      ),
+                    ],
+                  ),
+                if (coupon['type'] == 'Email')
+                  TextField(
+                    controller: emailController,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                if (coupon['type'] == 'Gift Card')
+                  Column(
+                    children: [
+                      TextField(
+                        controller: giftCardNumberController,
+                        decoration: const InputDecoration(labelText: 'Gift Card Number'),
+                      ),
+                      TextField(
+                        controller: giftCardPinController,
+                        decoration: const InputDecoration(labelText: 'Gift Card PIN'),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final Map<String, dynamic> additionalData = {};
+
+                switch (coupon['type']) {
+                  case 'Phone Number':
+                    additionalData['phone'] = phoneController.text;
+                    break;
+                  case 'Bank':
+                    additionalData['bank_name'] = bankNameController.text;
+                    additionalData['account_number'] = accountNumberController.text;
+                    additionalData['account_name'] = accountNameController.text;
+                    break;
+                  case 'Email':
+                    additionalData['email'] = emailController.text;
+                    break;
+                  case 'Gift Card':
+                    additionalData['gift_card_number'] = giftCardNumberController.text;
+                    additionalData['gift_card_pin'] = giftCardPinController.text;
+                    break;
+                }
+
+                try {
+                  final memberState = Provider.of<MemberState>(context, listen: false);
+                  // Set redeemType using switch case
+                  String redeemType;
+                  switch (coupon['type'].toLowerCase()) {
+                    case 'phone number':
+                      redeemType = 'phone';
+                      break;
+                    case 'bank':
+                      redeemType = 'bank';
+                      break;
+                    case 'email':
+                      redeemType = 'email';
+                      break;
+                    case 'gift card':
+                      redeemType = 'gift-card';
+                      break;
+                    default:
+                      redeemType = 'coins';
+                      break;
+                  }
+                  final response = await CouponApiService.redeemCoupon(
+                    memberId: memberState.memberId,
+                    couponId: int.parse(coupon['id']),
+                    redeemType: redeemType,
+                    additionalData: additionalData,
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(response['message'])),
+                    );
+                    Navigator.pop(context);
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString())),
+                    );
+                  }
+                }
+              },
+              child: const Text('Request'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -131,7 +285,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                   // Centered Row for Coins and Mascot
                   Center(
                     child: Row(
-                      mainAxisSize: MainAxisSize.min, // Center the row
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
                           'assets/images/coin_green.png',
@@ -181,13 +335,12 @@ class _CouponsScreenState extends State<CouponsScreen> {
                       : ListView(
                           padding: const EdgeInsets.all(16),
                           children: _coupons.map((coupon) {
+                            // Convert coupon to a Map<String, dynamic>
+                            final couponMap = Map<String, dynamic>.from(coupon);
                             return _CouponCard(
-                              logo: 'assets/images/coupons/${coupon['picture']}',
-                              name: coupon['name'],
-                              onRedeem: () => _navigateToRedemption(
-                                int.parse(coupon['id']),
-                                coupon['type'],
-                              ),
+                              logo: 'assets/images/coupons/${couponMap['picture']}',
+                              name: couponMap['name'],
+                              onRedeem: () => _handleCouponRedeem(couponMap),
                             );
                           }).toList(),
                         ),
@@ -203,12 +356,14 @@ class _CouponsScreenState extends State<CouponsScreen> {
   }
 }
 
+/// Private widget for coupon cards.
 class _CouponCard extends StatelessWidget {
   final String logo;
   final String name;
   final VoidCallback onRedeem;
 
   const _CouponCard({
+    super.key,
     required this.logo,
     required this.name,
     required this.onRedeem,
@@ -241,7 +396,7 @@ class _CouponCard extends StatelessWidget {
               ),
             ),
             child: const Text(
-              'Redeem Coins',
+              'Request Coupon',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

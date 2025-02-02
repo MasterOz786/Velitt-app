@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:logging/logging.dart';
 
 class WalletApiService {
   static const String baseUrl = 'http://localhost/api/wallet.php';
 
   // Fetch wallet balance
-  static Future<Map<String, dynamic>> fetchBalance(String memberId) async {
+  static Future<Map<String, dynamic>> fetchBalance(int memberId) async {
     final response = await http.get(Uri.parse('$baseUrl/balance?member_id=$memberId'));
 
     if (response.statusCode == 200) {
@@ -17,7 +16,7 @@ class WalletApiService {
   }
 
   // Fetch wallet history
-  static Future<Map<String, dynamic>> fetchHistory(String memberId) async {
+  static Future<Map<String, dynamic>> fetchHistory(int memberId) async {
     final response = await http.get(Uri.parse('$baseUrl/history?member_id=$memberId'));
 
     if (response.statusCode == 200) {
