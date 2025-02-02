@@ -13,36 +13,32 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  double _balance = 0;
   List<dynamic> _transactions = [];
   bool _isLoading = true;
   String _errorMessage = '';
 
   final Logger _logger = Logger('WalletScreen');
+  late MemberState memberState;
 
   @override
   void initState() {
     super.initState();
     // Fetch wallet data when the screen is initialized
-    final memberState = Provider.of<MemberState>(context, listen: false);
+    memberState = Provider.of<MemberState>(context, listen: false);
     _fetchWalletData(memberState.memberId.toString());
   }
 
   // Fetch wallet balance and history
   Future<void> _fetchWalletData(String memberId) async {
     try {
-      final balanceResponse = await WalletApiService.fetchBalance(memberId);
       final historyResponse = await WalletApiService.fetchHistory(memberId);
-      _logger.info('balanceResponse: ${balanceResponse.toString()}');
 
       // Update member state with new data
-
       setState(() {
-        _balance = balanceResponse['balance'] as double;
         _transactions = historyResponse['transactions'];
         _isLoading = false;
       });
-      _logger.info('${balanceResponse['balance']} coins in wallet');
+      
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load wallet data: ${e.toString()}';
@@ -116,7 +112,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '$_balance',
+                        '${memberState.memberCoins}',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 48,

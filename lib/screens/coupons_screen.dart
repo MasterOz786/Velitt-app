@@ -1,13 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:velitt/services/wallet_service.dart';
+import 'package:velitt/state/member_state.dart';
+import 'package:velitt/screens/coins_screen.dart';
+import 'package:velitt/services/coupon_service.dart';
+import 'package:logging/logging.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
 
-class CouponsScreen extends StatelessWidget {
+class CouponsScreen extends StatefulWidget {
   const CouponsScreen({super.key});
+
+  @override
+  State<CouponsScreen> createState() => _CouponsScreenState();
+}
+
+class _CouponsScreenState extends State<CouponsScreen> {
+  double _balance = 0;
+  bool _isLoading = true;
+  List<dynamic> _coupons = [];
+  String _errorMessage = '';
+
+  final Logger _logger = Logger('CouponsScreen');
 
   void _handleNavigation(BuildContext context, int index) {
     switch (index) {
       case 0:
-        Navigator.pushReplacementNamed(context, '/wallet');
+        Navigator.pushReplacementNamed(context, '/home');
         break;
       case 1:
         Navigator.pushReplacementNamed(context, '/dashboard');
@@ -19,13 +37,79 @@ class CouponsScreen extends StatelessWidget {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _fetchCoupons();
+  }
+
+  Future<void> _fetchCoupons() async {
+    try {
+      final coupons = await CouponApiService.fetchCoupons();
+      setState(() {
+        _coupons = coupons;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to load coupons: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _navigateToRedemption(int couponId, String type) {
+    final memberState = Provider.of<MemberState>(context, listen: false);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CoinRedemptionScreen(
+          couponId: couponId,
+          couponType: type,
+          balance: _balance,
+          onRedeem: (coins) async {
+            try {
+              _logger.info('Redeeming $coins coins for coupon $couponId');
+              final response = await CouponApiService.redeemCoupon(
+                memberId: int.tryParse(memberState.memberId ?? '') ?? 0,
+                couponId: couponId,
+                redeemType: type,
+                additionalData: {'coins': coins},
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(response['message'])),
+                );
+                // Refresh wallet balance after redemption
+                memberState.updateMember(
+                  id: response['user_id'].toString(),
+                  email: response['email'],
+                  name: response['username'],
+                  image: response['profile_picture'],
+                  coins: double.parse(response['coins']),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(e.toString())),
+                );
+              }
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final memberState = Provider.of<MemberState>(context, listen: false);
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
-            // Balance Card
+            // Balance Section
             Container(
               padding: const EdgeInsets.all(24),
               margin: const EdgeInsets.all(16),
@@ -44,30 +128,33 @@ class CouponsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset(
-                        'assets/images/coin_green.png',
-                        width: 40,
-                        height: 40,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '150',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
+                  // Centered Row for Coins and Mascot
+                  Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min, // Center the row
+                      children: [
+                        Image.asset(
+                          'assets/images/coin_green.png',
+                          width: 40,
+                          height: 40,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Image.asset(
-                        'assets/images/mascot.png',
-                        width: 60,
-                        height: 60,
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        Text(
+                          '${memberState.memberCoins}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Image.asset(
+                          'assets/images/mascot.png',
+                          width: 60,
+                          height: 60,
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
@@ -82,38 +169,35 @@ class CouponsScreen extends StatelessWidget {
             ),
             // Coupons List
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: const [
-                  _CouponCard(
-                    logo: 'assets/images/coupons/digicel.png',
-                    name: 'Digicel',
-                  ),
-                  _CouponCard(
-                    logo: 'assets/images/coupons/chippie.png',
-                    name: 'Chippie',
-                  ),
-                  _CouponCard(
-                    logo: 'assets/images/coupons/klamobile.png',
-                    name: 'Kla Mobile',
-                  ),
-                  _CouponCard(
-                    logo: 'assets/images/coupons/digicel.png',
-                    name: 'Digicel',
-                  ),
-                  _CouponCard(
-                    logo: 'assets/images/coupons/pagatinu.png',
-                    name: 'Pagatinu',
-                  ),
-                ],
-              ),
-            ),
-            BottomNavBar(
-              currentIndex: 0,
-              onTap: (index) => _handleNavigation(context, index),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage.isNotEmpty
+                      ? Center(
+                          child: Text(
+                            _errorMessage,
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: _coupons.map((coupon) {
+                            return _CouponCard(
+                              logo: 'assets/images/coupons/${coupon['picture']}',
+                              name: coupon['name'],
+                              onRedeem: () => _navigateToRedemption(
+                                int.parse(coupon['id']),
+                                coupon['type'],
+                              ),
+                            );
+                          }).toList(),
+                        ),
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 0,
+        onTap: (index) => _handleNavigation(context, index),
       ),
     );
   }
@@ -122,10 +206,12 @@ class CouponsScreen extends StatelessWidget {
 class _CouponCard extends StatelessWidget {
   final String logo;
   final String name;
+  final VoidCallback onRedeem;
 
   const _CouponCard({
     required this.logo,
     required this.name,
+    required this.onRedeem,
   });
 
   @override
@@ -134,7 +220,7 @@ class _CouponCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.black,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -146,9 +232,7 @@ class _CouponCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: () {
-              // Handle redeem action
-            },
+            onPressed: onRedeem,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE31E24),
               minimumSize: const Size(double.infinity, 50),

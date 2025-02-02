@@ -5,6 +5,15 @@ class MemberState extends ChangeNotifier {
   String? memberEmail;
   String? memberName;
   String? profileImage;
+  double memberCoins;
+
+  MemberState({
+    this.memberId,
+    this.memberEmail,
+    this.memberName,
+    this.memberCoins = 0,
+    this.profileImage,
+  });
 
   /// Updates the member data and notifies listeners.
   void updateMember({
@@ -12,11 +21,13 @@ class MemberState extends ChangeNotifier {
     required String email,
     required String name,
     required String image,
+    required double coins,
   }) {
     memberId = id;
     memberEmail = email;
     memberName = name;
     profileImage = image;
+    memberCoins = coins;
     notifyListeners();
   }
 }

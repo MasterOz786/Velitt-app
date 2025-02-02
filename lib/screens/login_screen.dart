@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
         body: json.encode(payload),
       );
 
-      _logger.info('Login response status: ${response.statusCode}');
+      _logger.info('Login response status: ${response.body}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         // Update global member state using the Provider extension method.
@@ -65,6 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
           email: data['email'],
           name: data['username'],
           image: data['profile_picture'],
+          coins: data['coins'],
         );
 
         // Navigate to HomeScreen (using pushReplacement to remove the login screen)
