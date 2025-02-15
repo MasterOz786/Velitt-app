@@ -11,7 +11,7 @@ class CouponException implements Exception {
 }
 
 class CouponApiService {
-  static const String baseUrl = 'http://localhost/api/coupons.php';
+  static const String baseUrl = 'https://velitt.digital/api/coupons.php';
 
   // Fetch coupons for a specific user
   static Future<List<dynamic>> fetchCoupons(int memberId) async {

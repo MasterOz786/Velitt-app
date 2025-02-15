@@ -9,6 +9,7 @@ import 'package:velitt/screens/dashboard_screen.dart';
 import 'package:velitt/screens/member_dashboard_screen.dart';
 import 'package:velitt/screens/profile_screen.dart';
 import 'package:velitt/screens/wallet_screen.dart';
+import 'package:velitt/screens/member_videos_screen.dart';
 import 'package:velitt/screens/coins_screen.dart';
 import 'package:velitt/screens/coupons_screen.dart';
 import 'package:velitt/screens/challenges_screen.dart';
@@ -44,6 +45,7 @@ class MyApp extends StatelessWidget {
         '/member_dashboard': (context) => const MemberDashboardScreen(),
         '/profile': (context) => const ProfileScreen(),
         '/wallet': (context) => const WalletScreen(),
+        '/videos': (context) => const MemberVideosScreen(),
         '/coupons': (context) => const CouponsScreen(),
         '/challenges': (context) => const ChallengesScreen(),
       },

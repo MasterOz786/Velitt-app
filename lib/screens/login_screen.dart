@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _errorMessage;
 
   // API endpoint for login – adjust the URL as needed (e.g., use 10.0.2.2 on Android emulator)
-  final String _loginUrl = 'http://localhost/api/users.php/login';
+  final String _loginUrl = 'https://velitt.digital/api/users.php/login';
 
   // Method to perform login API call
   Future<void> _login() async {

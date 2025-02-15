@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class WalletApiService {
-  static const String baseUrl = 'http://localhost/api/wallet.php';
-  static const String membersUrl = 'http://localhost/api/members.php';
+  static const String baseUrl = 'https://velitt.digital/api/wallet.php';
+  static const String membersUrl = 'https://velitt.digital/api/members.php';
 
   // Fetch wallet balance
   static Future<Map<String, dynamic>> fetchBalance(int memberId) async {

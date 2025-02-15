@@ -8,7 +8,6 @@ class MemberVideosScreen extends StatefulWidget {
   State<MemberVideosScreen> createState() => _MemberVideosScreenState();
 }
 
-
 class _MemberVideosScreenState extends State<MemberVideosScreen> {
   void _handleNavigation(int index) {
     switch (index) {
