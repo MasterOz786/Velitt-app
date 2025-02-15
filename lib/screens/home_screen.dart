@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // color: backgroundColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Image.asset(iconPath, width: 80, height: 80),
+              child: Image.asset(iconPath, width: 200, height: 200),
             ),
             const SizedBox(height: 8),
             Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
@@ -76,8 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
             HeaderWidget(
               title: 'Dashboard',
               memberName: memberState.memberName ?? 'None',
-              // profileImage: memberState.profileImage ?? 'https://via.placeholder.com/160',
-              profileImage: 'https://via.placeholder.com/160',
+              profileImage: memberState.profileImage ?? 'https://via.placeholder.com/160',
             ),
             Expanded(
               child: GridView.count(

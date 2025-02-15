@@ -164,19 +164,13 @@ class ProfileInformationScreen extends StatelessWidget {
               // Handle navigation based on index.
               switch (index) {
                 case 0:
-                  Navigator.pushReplacementNamed(context, '/dashboard');
+                  Navigator.pushReplacementNamed(context, '/home');
                   break;
                 case 1:
-                  Navigator.pushReplacementNamed(context, '/wallet');
+                  Navigator.pushReplacementNamed(context, '/dashboard');
                   break;
                 case 2:
-                  Navigator.pushReplacementNamed(context, '/member_videos');
-                  break;
-                case 3:
-                  Navigator.pushReplacementNamed(context, '/challenges');
-                  break;
-                case 4:
-                  // Already on profile screen.
+                  Navigator.pushReplacementNamed(context, '/profile');
                   break;
               }
             },

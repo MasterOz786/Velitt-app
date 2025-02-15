@@ -31,6 +31,7 @@ class _WalletScreenState extends State<WalletScreen> {
   // Fetch wallet balance and history
   Future<void> _fetchWalletData(int memberId) async {
     try {
+      _logger.info('Fetching wallet data for member $memberId');
       final historyResponse = await WalletApiService.fetchHistory(memberId);
 
       // Update member state with new data

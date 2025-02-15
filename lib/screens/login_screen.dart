@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
           email: data['email'],
           name: data['username'],
           image: data['profile_picture'],
-          coins: double.parse(data['coins'].toString()),
+          coins: double.parse(data['coins'].toString()) * 1.5,
         );
 
         // Navigate to HomeScreen (using pushReplacement to remove the login screen)
@@ -235,20 +235,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const Spacer(),
-              // Restart App Button (implementation pending)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement restart logic
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    side: const BorderSide(color: Color(0xFFE31E24)),
-                  ),
-                  child: const Text('Restart App'),
-                ),
-              ),
             ],
           ),
         ),
