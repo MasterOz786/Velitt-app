@@ -40,59 +40,73 @@ class HeaderWidget extends StatelessWidget {
             ),
           ),
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        profileImage,
-                        fit: BoxFit.cover,
-                      ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 24.0, top: 24.0, bottom: 8.0),
+                  child: Align(
+                    alignment: Alignment.centerLeft, // Moves the logo to the left
+                    child: Image.asset(
+                      'assets/icons/velitt-logo.png',
+                      height: 25,
                     ),
                   ),
-                  const SizedBox(width: 15),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 24.0, top: 32.0, bottom: 8.0),
+                  child: Row(
                     children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            profileImage,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                      Text(
-                        memberName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white70,
+                      const SizedBox(width: 15),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            memberName,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.settings,
+                          color: Colors.white,
+                          size: 48,
                         ),
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/personal_information');
+                        },
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.settings,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/personal_information');
-                    },
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

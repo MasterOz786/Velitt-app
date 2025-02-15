@@ -27,6 +27,17 @@ class WalletApiService {
     }
   }
 
+  // Fetch redemption history
+  static Future<Map<String, dynamic>> fetchRedemptions(int memberId) async {
+    final response = await http.get(Uri.parse('$baseUrl/redemptions?member_id=$memberId'));
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception('Failed to fetch redemptions');
+    }
+  }
+
   // Redeem coins
   static Future<Map<String, dynamic>> redeemCoins(int memberId, int couponId) async {
     final response = await http.post(
@@ -42,7 +53,7 @@ class WalletApiService {
     }
   }
 
-  // updaet wallet balance
+  // Update wallet balance
   static Future<Map<String, dynamic>> updateBalance(int memberId, double coins) async {
     final response = await http.put(
       Uri.parse('$membersUrl/updateCoins'),

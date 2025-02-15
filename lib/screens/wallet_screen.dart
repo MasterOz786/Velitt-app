@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:velitt/state/member_state.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
-import 'package:velitt/services/wallet_service.dart'; // Import the API service
+import 'package:velitt/widgets/wallet_header.dart';
+import 'package:velitt/services/wallet_service.dart';
 import 'package:logging/logging.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -14,8 +15,11 @@ class WalletScreen extends StatefulWidget {
 
 class _WalletScreenState extends State<WalletScreen> {
   List<dynamic> _transactions = [];
+  // List<dynamic> _redemptions = [];
   bool _isLoading = true;
   String _errorMessage = '';
+  int _currentPage = 1;
+  final int _itemsPerPage = 5;
 
   final Logger _logger = Logger('WalletScreen');
   late MemberState memberState;
@@ -23,23 +27,20 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   void initState() {
     super.initState();
-    // Fetch wallet data when the screen is initialized
     memberState = Provider.of<MemberState>(context, listen: false);
     _fetchWalletData(memberState.memberId);
   }
 
-  // Fetch wallet balance and history
   Future<void> _fetchWalletData(int memberId) async {
     try {
-      _logger.info('Fetching wallet data for member $memberId');
       final historyResponse = await WalletApiService.fetchHistory(memberId);
+      // final redemptionsResponse = await WalletApiService.fetchRedemptions(memberId);
 
-      // Update member state with new data
       setState(() {
         _transactions = historyResponse['transactions'];
+        // _redemptions = redemptionsResponse['redemptions'];
         _isLoading = false;
       });
-      
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load wallet data: ${e.toString()}';
@@ -48,21 +49,7 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
-  // Handle redeem coins
-  Future<void> _redeemCoins(int memberId, int couponId) async {
-    try {
-      final response = await WalletApiService.redeemCoins(memberId, couponId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'])),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to redeem coins')),
-      );
-    }
-  }
-
-  void _handleNavigation(BuildContext context, int index) {
+  void _handleNavigation(int index) {
     switch (index) {
       case 0:
         Navigator.pushReplacementNamed(context, '/home');
@@ -76,217 +63,235 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  void _downloadExcel() {
+    // Implement Excel download functionality
+  }
+
+  void _filterByDate(String period) {
+    // Implement date filtering
+  }
+
   @override
   Widget build(BuildContext context) {
     final MemberState memberState = Provider.of<MemberState>(context);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
-            // Balance Card
+            WalletHeaderWidget(
+              coins: memberState.memberCoins,
+              onRedeemPressed: () {
+                Navigator.pushNamed(context, '/coupons');
+              },
+            ),
             Container(
-              padding: const EdgeInsets.all(24),
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(30),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFE31E24), Colors.black],
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
               ),
-              child: Column(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'BALANCE',
+                    'Wallet History',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 16),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset(
-                        'assets/images/coin_green.png',
-                        width: 40,
-                        height: 40,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${memberState.memberCoins}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
+                      TextButton.icon(
+                        onPressed: _downloadExcel,
+                        icon: const Icon(Icons.file_download, color: Colors.white, size: 20),
+                        label: const Text(
+                          'Download Excel',
+                          style: TextStyle(color: Colors.white, fontSize: 14),
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Image.asset(
-                        'assets/images/mascot.png',
-                        width: 60,
-                        height: 60,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: PopupMenuButton<String>(
+                          onSelected: _filterByDate,
+                          child: Row(
+                            children: [
+                              Text(
+                                'Filter By Date',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const Icon(Icons.arrow_drop_down, color: Colors.black87),
+                            ],
+                          ),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'today',
+                              child: Text('Today'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'week',
+                              child: Text('This Week'),
+                            ),
+                            const PopupMenuItem(
+                              value: 'month',
+                              child: Text('This Month'),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Ready to redeem',
-                    style: TextStyle(
-                      color: Color(0xFF4CAF50),
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/coupons');
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE31E24),
-                      minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25),
-                      ),
-                    ),
-                    child: const Text(
-                      'Redeem Coins',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ],
               ),
             ),
-            // Wallet History
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _errorMessage.isNotEmpty
-                        ? Center(
-                            child: Text(
-                              _errorMessage,
-                              style: const TextStyle(color: Colors.red),
-                            ),
-                          )
-                        : Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    const Text(
-                                      'Wallet History',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    TextButton.icon(
-                                      onPressed: () {
-                                        // Handle Excel download
-                                      },
-                                      icon: const Icon(Icons.file_download),
-                                      label: const Text('Download Excel'),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      onSelected: (value) {
-                                        // Handle filter selection
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'today',
-                                          child: Text('Today'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'week',
-                                          child: Text('This Week'),
-                                        ),
-                                        const PopupMenuItem(
-                                          value: 'month',
-                                          child: Text('This Month'),
-                                        ),
-                                      ],
-                                      child: const Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: Text(
-                                          'Filter By Date',
-                                          style: TextStyle(color: Colors.black),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                color: Colors.black87,
-                                child: const Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Number of Coins',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Date',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Time',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Event',
-                                        style: TextStyle(fontWeight: FontWeight.bold),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: ListView(
-                                  children: _transactions.map((transaction) {
-                                    return _TransactionItem(
-                                      coins: transaction['coins'].toString(),
-                                      date: transaction['date'],
-                                      time: transaction['time'],
-                                      event: transaction['event'],
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ],
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _errorMessage.isNotEmpty
+                      ? Center(
+                          child: Text(
+                            _errorMessage,
+                            style: const TextStyle(color: Colors.red),
                           ),
-              ),
-            ),
-            BottomNavBar(
-              currentIndex: 0,
-              onTap: (index) => _handleNavigation(context, index),
+                        )
+                      : Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Number of Coins',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Date',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Time',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Event',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: _transactions.length,
+                                itemBuilder: (context, index) {
+                                  final transaction = _transactions[index];
+                                  return _TransactionItem(
+                                    coins: transaction['coins'].toString(),
+                                    date: transaction['date'],
+                                    time: transaction['time'],
+                                    event: transaction['event'],
+                                  );
+                                },
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_left),
+                                    color: Colors.grey,
+                                    onPressed: _currentPage > 1
+                                        ? () => setState(() => _currentPage--)
+                                        : null,
+                                  ),
+                                  for (int i = 1; i <= _transactions.length / _itemsPerPage; i++)
+                                    _buildPageButton(i),
+                                  IconButton(
+                                    icon: const Icon(Icons.chevron_right),
+                                    color: Colors.grey,
+                                    onPressed: _currentPage < 5
+                                        ? () => setState(() => _currentPage++)
+                                        : null,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavBar(
+        currentIndex: 0,
+        onTap: _handleNavigation,
+      ),
+    );
+  }
+
+  Widget _buildPageButton(int pageNumber) {
+    final isCurrentPage = pageNumber == _currentPage;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: CircleAvatar(
+        radius: 16,
+        backgroundColor: isCurrentPage ? const Color(0xFFE31E24) : Colors.grey,
+        child: Text(
+          pageNumber.toString(),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: isCurrentPage ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ),
     );
@@ -309,18 +314,11 @@ class _TransactionItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white, // Solid background for contrast
+        color: const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         children: [
@@ -329,8 +327,9 @@ class _TransactionItem extends StatelessWidget {
             child: Text(
               coins,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                fontSize: 14,
                 color: Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -339,8 +338,9 @@ class _TransactionItem extends StatelessWidget {
             child: Text(
               date,
               style: const TextStyle(
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
                 color: Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -349,8 +349,9 @@ class _TransactionItem extends StatelessWidget {
             child: Text(
               time,
               style: const TextStyle(
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
                 color: Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -359,8 +360,9 @@ class _TransactionItem extends StatelessWidget {
             child: Text(
               event,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
+                fontSize: 14,
+                color: Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),

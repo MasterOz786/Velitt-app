@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:velitt/services/wallet_service.dart';
 import 'package:velitt/state/member_state.dart';
+import 'package:velitt/widgets/wallet_header.dart';
+import 'package:velitt/services/wallet_service.dart';
 import 'package:velitt/screens/coins_screen.dart';
 import 'package:velitt/services/coupon_service.dart';
 import 'package:logging/logging.dart';
@@ -46,7 +47,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
     try {
       final coupons = await CouponApiService.fetchAllCoupons();
       if (coupons == null || coupons.isEmpty) {
-        // When API returns empty data, show a friendly message.
         setState(() {
           _errorMessage = 'No coupons available at the moment.';
           _isLoading = false;
@@ -59,7 +59,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
       }
     } catch (e) {
       setState(() {
-        // Show a user-friendly error message.
         _errorMessage = 'Failed to load coupons. Please try again later.';
         _isLoading = false;
       });
@@ -93,7 +92,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     ),
                   ),
                 );
-                // Refresh wallet balance after redemption.
                 memberState.updateMember(
                   id: response['user_id'],
                   email: response['email'],
@@ -119,9 +117,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
     );
   }
 
-  /// Determines which redemption flow to use based on the coupon type.
   void _handleCouponRedeem(Map<String, dynamic> coupon) {
-    // If coupon type is "Coins", navigate to the coin redemption screen.
     if (coupon['type'].toString().toLowerCase() == 'coins') {
       int couponId = int.tryParse(coupon['id'].toString()) ?? 0;
       _navigateToRedemption(couponId, coupon['type']);
@@ -130,10 +126,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
     }
   }
 
-  /// Shows a popup dialog for coupons that require additional input.
-  ///
-  /// After the input is taken and the coupon is successfully redeemed,
-  /// the entire screen is replaced by the CoinRedemptionScreen.
   void _showCouponRedeemDialog(Map<String, dynamic> coupon) {
     final TextEditingController phoneController = TextEditingController();
     final TextEditingController bankNameController = TextEditingController();
@@ -228,7 +220,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 try {
                   final memberState =
                       Provider.of<MemberState>(context, listen: false);
-                  // Determine redeemType.
                   String redeemType;
                   switch (coupon['type'].toString().toLowerCase()) {
                     case 'phone number':
@@ -264,8 +255,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
                         ),
                       ),
                     );
-                    // After successful redemption, replace the CouponsScreen
-                    // with the CoinRedemptionScreen.
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
@@ -338,70 +327,19 @@ class _CouponsScreenState extends State<CouponsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final memberState = Provider.of<MemberState>(context, listen: false);
+    final memberState = Provider.of<MemberState>(context);
+    
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Column(
           children: [
-            // Balance Section
-            Container(
-              padding: const EdgeInsets.all(24),
-              margin: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'BALANCE',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/images/coin_green.png',
-                          width: 40,
-                          height: 40,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${memberState.memberCoins}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Image.asset(
-                          'assets/images/mascot.png',
-                          width: 60,
-                          height: 60,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Ready to redeem',
-                    style: TextStyle(
-                      color: Color(0xFF4CAF50),
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
+            WalletHeaderWidget(
+              coins: memberState.memberCoins,
+              onRedeemPressed: () {
+                Navigator.pushNamed(context, '/coupons');
+              },
             ),
-            // Coupons List
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -415,7 +353,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
                       : ListView(
                           padding: const EdgeInsets.all(16),
                           children: _coupons.map((coupon) {
-                            // Convert coupon to a Map<String, dynamic>
                             final couponMap =
                                 Map<String, dynamic>.from(coupon);
                             return _CouponCard(
@@ -438,7 +375,6 @@ class _CouponsScreenState extends State<CouponsScreen> {
   }
 }
 
-/// Private widget for coupon cards.
 class _CouponCard extends StatelessWidget {
   final String logo;
   final String name;
