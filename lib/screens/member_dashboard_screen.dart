@@ -18,6 +18,7 @@ class MemberDashboardScreen extends StatefulWidget {
 class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   // Logger for debugging purposes
   final Logger _logger = Logger('MemberDashboardScreen');
+  late final MemberState memberState;
 
   // Category expanded/collapsed states
   final Map<String, bool> _categoryExpanded = {
@@ -48,16 +49,17 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    memberState = Provider.of<MemberState>(context, listen: false);
     _logger.info('Initializing MemberDashboardScreen');
-    _fetchParameters();
+    _fetchParameters(memberState.memberId);
   }
 
-  Future<void> _fetchParameters() async {
+  Future<void> _fetchParameters(int memberId) async {
     _logger.fine('Fetching parameters from API');
     try {
       // Note: If testing on an emulator, use 10.0.2.2 instead of localhost.
       final response = await http.get(
-        Uri.parse('http://localhost/api/members.php/parameters/121'),
+        Uri.parse('http://localhost/api/members.php/parameters/$memberId'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

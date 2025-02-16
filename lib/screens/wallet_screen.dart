@@ -19,9 +19,6 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
-  // ---------------------------
-  // Data
-  // ---------------------------
   List<dynamic> _transactions = [];
   List<dynamic> _redemptions = [];
 
@@ -32,15 +29,9 @@ class _WalletScreenState extends State<WalletScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  // ---------------------------
-  // Pagination for Transactions
-  // ---------------------------
   int _currentPage = 1;
   final int _itemsPerPage = 5;
-
-  // ---------------------------
-  // Pagination for Redemptions
-  // ---------------------------
+  
   int _currentRedemptionPage = 1;
   final int _redemptionItemsPerPage = 5;
 

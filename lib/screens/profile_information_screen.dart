@@ -27,7 +27,8 @@ class ProfileInformationScreen extends StatelessWidget {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -52,8 +53,11 @@ class ProfileInformationScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 80,
-                        // Using a placeholder image URL; replace with your asset or valid URL.
-                        backgroundImage: const NetworkImage('https://via.placeholder.com/160'),
+                        // Use the profileImage from memberState; fall back to a placeholder.
+                        backgroundImage: NetworkImage(
+                          memberState.profileImage ??
+                              'https://via.placeholder.com/160',
+                        ),
                         child: Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
@@ -70,9 +74,10 @@ class ProfileInformationScreen extends StatelessWidget {
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.white, size: 24),
+                            icon: const Icon(Icons.edit,
+                                color: Colors.white, size: 24),
                             onPressed: () {
-                              // Add edit profile functionality here.
+                              // Add edit profile picture functionality here.
                             },
                           ),
                         ),
@@ -81,8 +86,9 @@ class ProfileInformationScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 15),
                   Text(
-                    memberState.memberName ?? 'None',
-                    style: TextStyle(
+                    memberState.memberName ??
+                        '${memberState.firstName ?? ''} ${memberState.lastName ?? ''}',
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -111,11 +117,23 @@ class ProfileInformationScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'First Name', hint: 'Enter first name'),
+                    _buildTextField(
+                      label: 'First Name',
+                      hint: 'Enter first name',
+                      value: memberState.firstName ?? '',
+                    ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'Middle Name', hint: 'Enter middle name'),
+                    _buildTextField(
+                      label: 'Middle Name',
+                      hint: 'Enter middle name',
+                      value: memberState.middleName ?? '',
+                    ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'Last Name', hint: 'Enter last name'),
+                    _buildTextField(
+                      label: 'Last Name',
+                      hint: 'Enter last name',
+                      value: memberState.lastName ?? '',
+                    ),
                     const SizedBox(height: 20),
 
                     // Contact Information Section
@@ -128,11 +146,23 @@ class ProfileInformationScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'Telephone', hint: 'Enter telephone number'),
+                    _buildTextField(
+                      label: 'Telephone',
+                      hint: 'Enter telephone number',
+                      value: memberState.telephone ?? '',
+                    ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'Mobile', hint: 'Enter mobile number'),
+                    _buildTextField(
+                      label: 'Mobile',
+                      hint: 'Enter mobile number',
+                      value: memberState.mobile ?? '',
+                    ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'Email', hint: 'Enter email address'),
+                    _buildTextField(
+                      label: 'Email',
+                      hint: 'Enter email address',
+                      value: memberState.memberEmail ?? '',
+                    ),
                     const SizedBox(height: 20),
 
                     // Additional Information Section
@@ -145,11 +175,22 @@ class ProfileInformationScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildDatePickerField(label: 'Date of Birth'),
+                    _buildDatePickerField(
+                      label: 'Date of Birth',
+                      value: memberState.dateOfBirth ?? '',
+                    ),
                     const SizedBox(height: 10),
-                    _buildDatePickerField(label: 'Agreement Effective Date'),
+                    _buildDatePickerField(
+                      label: 'Agreement Effective Date',
+                      value: memberState.agreementEffectiveDate ?? '',
+                    ),
                     const SizedBox(height: 10),
-                    _buildTextField(label: 'Notes', hint: 'Enter any notes', maxLines: 4),
+                    _buildTextField(
+                      label: 'Notes',
+                      hint: 'Enter any notes',
+                      maxLines: 4,
+                      value: memberState.notes ?? '',
+                    ),
                     const SizedBox(height: 20),
                   ],
                 ),
@@ -180,7 +221,15 @@ class ProfileInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTextField({required String label, required String hint, int maxLines = 1}) {
+  /// Build a text field with a pre-filled value.
+  Widget _buildTextField({
+    required String label,
+    required String hint,
+    String? value,
+    int maxLines = 1,
+  }) {
+    // Creating a new controller on every build is acceptable for display purposes.
+    final controller = TextEditingController(text: value);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -194,6 +243,7 @@ class ProfileInformationScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           maxLines: maxLines,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
@@ -211,7 +261,12 @@ class ProfileInformationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDatePickerField({required String label}) {
+  /// Build a date picker field with a pre-filled value.
+  Widget _buildDatePickerField({
+    required String label,
+    String? value,
+  }) {
+    final controller = TextEditingController(text: value);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -225,6 +280,7 @@ class ProfileInformationScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         TextField(
+          controller: controller,
           readOnly: true,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
@@ -239,7 +295,7 @@ class ProfileInformationScreen extends StatelessWidget {
             suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFFE31E24)),
           ),
           onTap: () {
-            // Add date picker functionality here.
+            // Add date picker functionality here if needed.
           },
         ),
       ],

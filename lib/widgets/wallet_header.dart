@@ -19,6 +19,10 @@ class WalletHeaderWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final angValue = _calculateANGValue(coins);
+    final Color redeemColor = coins >= 3 ? Colors.green : Colors.red;
+    final String redeemStatus = coins >= 3 ? 'Ready to redeem' : 'Insufficient Balance';
+    final String redeemImagePath = coins >= 3 ? 'assets/images/coin_green.png' : 'assets/images/coin_red.png';
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       margin: const EdgeInsets.all(8),
@@ -53,9 +57,9 @@ class WalletHeaderWidget extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Image.asset(
-                    'assets/images/coin_green.png',
-                    width: 40,
-                    height: 40,
+                    redeemImagePath,
+                    width: 64,
+                    height: 64,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -69,8 +73,8 @@ class WalletHeaderWidget extends StatelessWidget {
                   const SizedBox(width: 8),
                   Image.asset(
                     'assets/images/mascot.png',
-                    width: 60,
-                    height: 60,
+                    width: 64,
+                    height: 64,
                   ),
                 ],
               ),
@@ -83,10 +87,11 @@ class WalletHeaderWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Ready to redeem',
+
+              Text(
+                redeemStatus,
                 style: TextStyle(
-                  color: Color(0xFF4CAF50),
+                  color: redeemColor,
                   fontSize: 16,
                 ),
               ),

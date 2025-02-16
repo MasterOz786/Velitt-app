@@ -30,8 +30,8 @@ class _LoginScreenState extends State<LoginScreen> {
   // Error message to display login errors
   String? _errorMessage;
 
-  // API endpoint for login – adjust the URL as needed (e.g., use 10.0.2.2 on Android emulator)
-  final String _loginUrl = 'http://localhost/api/users.php/login';
+  // API endpoint for login – adjust the URL as needed.
+  final String _loginUrl = 'https://velitt.digital/api/users.php/login';
 
   // Method to perform login API call
   Future<void> _login() async {
@@ -56,19 +56,28 @@ class _LoginScreenState extends State<LoginScreen> {
         body: json.encode(payload),
       );
 
-      _logger.info('Login response status: ${response.body}');
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        // Update global member state using the Provider extension method.
+        _logger.info('Login response: ${data}');
+
+        // Update global member state with extended profile fields.
         context.read<MemberState>().updateMember(
-          id: int.parse(data['user_id'].toString()),
+          id: int.parse(data['id'].toString()),
           email: data['email'],
-          name: data['username'],
-          image: data['profile_picture'],
+          name: data['firstName'],
+          image: data['photo'] ?? '',
           coins: double.parse(data['coins'].toString()) * 1.5,
+          firstName: data['firstName'] ?? '',
+          middleName: data['Tussenvoegsel'] ?? '',
+          lastName: data['lastName'] ?? '',
+          telephone: data['telephone'] ?? '',
+          mobile: data['mobile'] ?? '',
+          dateOfBirth: data['date_of_birth'] ?? '',
+          agreementEffectiveDate: data['agreementStartDate'] ?? '',
+          notes: data['notes'] ?? '',
         );
 
-        // Navigate to HomeScreen (using pushReplacement to remove the login screen)
+        // Navigate to HomeScreen (replace login screen)
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
@@ -171,7 +180,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: const Icon(Icons.lock, color: Colors.white),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                      _obscurePassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
                       color: Colors.white,
                     ),
                     onPressed: () {
@@ -197,7 +208,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const ForgotPasswordScreen(),
+                        builder: (context) =>
+                            const ForgotPasswordScreen(),
                       ),
                     );
                   },
