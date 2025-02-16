@@ -57,7 +57,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     try {
       // Note: If testing on an emulator, use 10.0.2.2 instead of localhost.
       final response = await http.get(
-        Uri.parse('https://velitt.digital/api/members.php/parameters/121'),
+        Uri.parse('http://localhost/api/members.php/parameters/121'),
       );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

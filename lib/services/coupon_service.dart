@@ -11,7 +11,7 @@ class CouponException implements Exception {
 }
 
 class CouponApiService {
-  static const String baseUrl = 'https://velitt.digital/api/coupons.php';
+  static const String baseUrl = 'http://localhost/api/coupons.php';
 
   // Fetch coupons for a specific user
   static Future<List<dynamic>> fetchCoupons(int memberId) async {
@@ -61,7 +61,7 @@ class CouponApiService {
     Map<String, dynamic>? additionalData,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/redeem/$redeemType'),
+      Uri.parse('$baseUrl/redeem'),
       headers: {'Content-Type': 'application/json'},
       body: json.encode({
         'member_id': memberId,

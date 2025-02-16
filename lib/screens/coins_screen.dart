@@ -5,7 +5,6 @@ import 'package:velitt/widgets/wallet_header.dart';
 import 'package:flutter/services.dart';
 import 'package:velitt/services/coupon_service.dart';
 import 'package:velitt/services/wallet_service.dart';
-import 'package:velitt/widgets/header.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
 import 'package:logging/logging.dart';
 
@@ -51,10 +50,8 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
     try {
       double newBalance = memberState.memberCoins - redeemedCoins;
       final response = await WalletApiService.updateBalance(memberState.memberId, newBalance);
-      memberState.updateCoins(
-        newBalance,
-      );
-      _logger.info('Member coins updated to ${newBalance}');
+      memberState.updateCoins(newBalance);
+      _logger.info('Member coins updated to $newBalance');
     } catch (e) {
       _logger.severe('Error updating balance: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,8 +61,6 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
   }
 
   Future<void> _showCongratulations(double redeemedCoins) async {
-    await _updateBalance(redeemedCoins);
-
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -74,22 +69,56 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
       ),
     );
     await Future.delayed(const Duration(seconds: 2));
-    Navigator.of(context).pop();
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(); // Remove dialog
+    Navigator.of(context).pop(); // Return to previous screen
+  }
+
+  Future<void> _redeemCoupon(double coins) async {
+    final memberState = Provider.of<MemberState>(context, listen: false);
+    if (coins > memberState.memberCoins) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Insufficient balance')),
+      );
+      return;
+    }
+
+    try {
+      final response = await CouponApiService.redeemCoupon(
+        memberId: memberState.memberId,
+        couponId: widget.couponId,
+        redeemType: widget.couponType,
+        additionalData: {'coins': coins},
+      );
+      await _updateBalance(coins);
+      await _showCongratulations(coins);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response['message'] ?? 'Coupon redeemed successfully.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to redeem coupon. Please try again later.'),
+          ),
+        );
+      }
+      _logger.severe('Error redeeming coupon', e);
+    }
   }
 
   void _showRedeemModal(BuildContext context, double coins) {
     _customCoinsController.clear();
-    final memberState = Provider.of<MemberState>(context, listen: false);
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: Colors.black,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           content: Container(
             width: double.maxFinite,
             child: Column(
@@ -133,15 +162,9 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                               showCloseIcon: true,
                             ),
                           );
-                        } else if (inputCoins > memberState.memberCoins) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Insufficient balance'),
-                              showCloseIcon: true,
-                            ),
-                          );
                         } else {
-                          _showCongratulations(inputCoins);
+                          Navigator.pop(context);
+                          _redeemCoupon(inputCoins);
                         }
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,10 +177,7 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFE31E24),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     child: const Text(
                       'Redeem',
@@ -174,72 +194,6 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildCouponCard(double coins) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/mascot.png',
-                  width: 80,
-                  height: 80,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '$coins Fitties',
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _showRedeemModal(context, coins),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE31E24),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  'Redeem',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -292,32 +246,20 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
                           double coins = double.tryParse(_customCoinsController.text) ?? 0;
                           if (coins <= 0) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a valid amount'),
-                              ),
-                            );
-                          } else if (coins > memberState.memberCoins) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Insufficient balance'),
-                              ),
+                              const SnackBar(content: Text('Please enter a valid amount')),
                             );
                           } else {
-                            _showCongratulations(coins);
+                            _redeemCoupon(coins);
                           }
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter an amount'),
-                            ),
+                            const SnackBar(content: Text('Please enter an amount')),
                           );
                         }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE31E24),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: const Text(
@@ -336,8 +278,7 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
             Expanded(
               child: ListView.builder(
                 itemCount: predefinedCoins.length,
-                itemBuilder: (context, index) =>
-                    _buildCouponCard(predefinedCoins[index]),
+                itemBuilder: (context, index) => _buildCouponCard(predefinedCoins[index]),
               ),
             ),
           ],
@@ -346,6 +287,70 @@ class _CoinRedemptionScreenState extends State<CoinRedemptionScreen> {
       bottomNavigationBar: BottomNavBar(
         currentIndex: 0,
         onTap: (index) => _handleNavigation(context, index),
+      ),
+    );
+  }
+
+  Widget _buildCouponCard(double coins) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/mascot.png',
+                  width: 80,
+                  height: 80,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  '$coins Fitties',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _redeemCoupon(coins),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE31E24),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text(
+                  'Redeem',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,12 +1,12 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
 import 'package:provider/provider.dart';
 import 'package:velitt/state/member_state.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
 import 'package:velitt/widgets/wallet_header.dart';
 import 'package:velitt/services/wallet_service.dart';
 import 'package:logging/logging.dart';
+import 'package:intl/intl.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -19,20 +19,32 @@ class WalletScreen extends StatefulWidget {
 }
 
 class _WalletScreenState extends State<WalletScreen> {
+  // ---------------------------
+  // Data
+  // ---------------------------
   List<dynamic> _transactions = [];
   List<dynamic> _redemptions = [];
+
+  // We keep backup lists for filtering:
   List<dynamic> _allTransactions = [];
   List<dynamic> _allRedemptions = [];
 
   bool _isLoading = true;
   String _errorMessage = '';
 
+  // ---------------------------
+  // Pagination for Transactions
+  // ---------------------------
   int _currentPage = 1;
   final int _itemsPerPage = 5;
 
+  // ---------------------------
+  // Pagination for Redemptions
+  // ---------------------------
   int _currentRedemptionPage = 1;
   final int _redemptionItemsPerPage = 5;
 
+  // Logging
   final Logger _logger = Logger('WalletScreen');
   late MemberState memberState;
 
@@ -43,6 +55,9 @@ class _WalletScreenState extends State<WalletScreen> {
     _fetchWalletData(memberState.memberId);
   }
 
+  // ----------------------------------------------------------------
+  // Fetch Data
+  // ----------------------------------------------------------------
   Future<void> _fetchWalletData(int memberId) async {
     try {
       final historyResponse = await WalletApiService.fetchHistory(memberId);
@@ -50,9 +65,11 @@ class _WalletScreenState extends State<WalletScreen> {
           await WalletApiService.fetchRedemptions(memberId);
 
       setState(() {
+        // Transactions
         _transactions = historyResponse['transactions'];
         _allTransactions = List.from(_transactions);
 
+        // Redemptions
         _redemptions = redemptionsResponse['redemptions'];
         _allRedemptions = List.from(_redemptions);
 
@@ -66,6 +83,9 @@ class _WalletScreenState extends State<WalletScreen> {
     }
   }
 
+  // ----------------------------------------------------------------
+  // Navigation
+  // ----------------------------------------------------------------
   void _handleNavigation(int index) {
     switch (index) {
       case 0:
@@ -94,15 +114,15 @@ class _WalletScreenState extends State<WalletScreen> {
     // Add headers
     // Set header row values in row 1
       var cellA1 = sheet.cell(CellIndex.indexByString("A1"));
-      cellA1.value = TextCellValue("Number of Coins");
+      cellA1.value = TextCellValue("Event");
       cellA1.cellStyle = headerStyle;
 
       var cellB1 = sheet.cell(CellIndex.indexByString("B1"));
-      cellB1.value = TextCellValue("Date & Time");
+      cellB1.value = TextCellValue("Fitties Earnt");
       cellB1.cellStyle = headerStyle;
 
       var cellC1 = sheet.cell(CellIndex.indexByString("C1"));
-      cellC1.value = TextCellValue("Event");
+      cellC1.value = TextCellValue("Date & Time");
       cellC1.cellStyle = headerStyle;
 
     // Add data
@@ -133,37 +153,46 @@ class _WalletScreenState extends State<WalletScreen> {
   void _filterByDate(String period) {
     setState(() {
       final now = DateTime.now();
+      DateTime startDate;
+
+      switch (period) {
+        case 'today':
+          startDate = DateTime(now.year, now.month, now.day);
+          break;
+        case 'week':
+          startDate = now.subtract(Duration(days: now.weekday - 1));
+          break;
+        case 'month':
+          startDate = DateTime(now.year, now.month, 1);
+          break;
+        default:
+          _transactions = List.from(_allTransactions);
+          return;
+      }
+
       _transactions = _allTransactions.where((transaction) {
-        final transactionDate = DateTime.parse(transaction['date']);
-        switch (period) {
-          case 'today':
-            return transactionDate.year == now.year &&
-                transactionDate.month == now.month &&
-                transactionDate.day == now.day;
-          case 'week':
-            final weekAgo = now.subtract(const Duration(days: 7));
-            return transactionDate.isAfter(weekAgo);
-          case 'month':
-            return transactionDate.year == now.year &&
-                transactionDate.month == now.month;
-          default:
-            return true;
-        }
+        final transactionDate = DateFormat('yyyy-MM-dd').parse(transaction['date']);
+        return transactionDate.isAfter(startDate) || transactionDate.isAtSameMomentAs(startDate);
       }).toList();
+
+      // Reset transaction pagination
       _currentPage = 1;
     });
   }
 
   void _filterByStatus(String status) {
     setState(() {
+      // "all" means show everything
       if (status == 'all') {
         _redemptions = List.from(_allRedemptions);
       } else {
+        // Filter by exact match of status (case-insensitive)
         _redemptions = _allRedemptions.where((r) {
           final rStatus = (r['status'] as String).toLowerCase();
-          return rStatus == status.toLowerCase();
+          return rStatus == status;
         }).toList();
       }
+      // Reset redemption pagination
       _currentRedemptionPage = 1;
     });
   }
@@ -183,27 +212,10 @@ class _WalletScreenState extends State<WalletScreen> {
               ? () => onPageChanged(currentPage - 1)
               : null,
         ),
-        for (int i = 1; i <= totalPages; i++)
-          GestureDetector(
-            onTap: () => onPageChanged(i),
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              child: CircleAvatar(
-                radius: 16,
-                backgroundColor:
-                    i == currentPage ? const Color(0xFFE31E24) : Colors.grey,
-                child: Text(
-                  i.toString(),
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight:
-                        i == currentPage ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-            ),
-          ),
+        Text(
+          'Page $currentPage of $totalPages',
+          style: const TextStyle(color: Colors.white),
+        ),
         IconButton(
           icon: const Icon(Icons.chevron_right),
           color: Colors.grey,
@@ -219,6 +231,7 @@ class _WalletScreenState extends State<WalletScreen> {
   Widget build(BuildContext context) {
     final MemberState memberState = Provider.of<MemberState>(context);
 
+    // Calculate pagination details for transactions
     final totalPagesTransactions =
         (_transactions.length / _itemsPerPage).ceil();
     final startIndexTrans = (_currentPage - 1) * _itemsPerPage;
@@ -227,6 +240,7 @@ class _WalletScreenState extends State<WalletScreen> {
     final displayedTransactions =
         _transactions.sublist(startIndexTrans, endIndexTrans);
 
+    // Calculate pagination details for redemptions
     final totalPagesRedemptions =
         (_redemptions.length / _redemptionItemsPerPage).ceil();
     final startIndexRed =
@@ -241,12 +255,106 @@ class _WalletScreenState extends State<WalletScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            // ---------------- Wallet Header ----------------
             WalletHeaderWidget(
               coins: memberState.memberCoins,
               onRedeemPressed: () {
                 Navigator.pushNamed(context, '/coupons');
               },
             ),
+
+            // ---------------- Wallet History header (with download and filter) ----------------
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFE31E24), Colors.black],
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(30),
+                  bottomRight: Radius.circular(30),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Wallet History',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: _downloadExcel,
+                        icon: const Icon(
+                          Icons.file_download,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        label: const Text(
+                          'Excel',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: PopupMenuButton<String>(
+                          onSelected: _filterByDate,
+                          child: Row(
+                            children: const [
+                              Text(
+                                'Filter',
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Icon(Icons.arrow_drop_down,
+                                  color: Colors.black87),
+                            ],
+                          ),
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'today',
+                              child: Text('Today'),
+                            ),
+                            PopupMenuItem(
+                              value: 'week',
+                              child: Text('This Week'),
+                            ),
+                            PopupMenuItem(
+                              value: 'month',
+                              child: Text('This Month'),
+                            ),
+                            PopupMenuItem(
+                              value: 'all',
+                              child: Text('All'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -261,171 +369,96 @@ class _WalletScreenState extends State<WalletScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFFE31E24), Colors.black],
-                                    begin: Alignment.centerRight,
-                                    end: Alignment.centerLeft,
+                              // ---------------- Wallet Transactions Section ----------------
+                              if (_transactions.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text(
+                                    'No transaction history available.',
+                                    style: TextStyle(color: Colors.white),
                                   ),
-                                  borderRadius: BorderRadius.only(
-                                    bottomLeft: Radius.circular(30),
-                                    bottomRight: Radius.circular(30),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                )
+                              else
+                                Column(
                                   children: [
-                                    const Text(
-                                      'Wallet History',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        TextButton.icon(
-                                          onPressed: _downloadExcel,
-                                          icon: const Icon(
-                                            Icons.file_download,
-                                            color: Colors.white,
-                                            size: 20,
-                                          ),
-                                          label: const Text(
-                                            'Excel',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14,
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 8),
+                                      child: Row(
+                                        children: const [
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Number of Coins',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 12, vertical: 6),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: PopupMenuButton<String>(
-                                            onSelected: _filterByDate,
-                                            child: Row(
-                                              children: const [
-                                                Text(
-                                                  'Filter',
-                                                  style: TextStyle(
-                                                    color: Colors.black87,
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                Icon(Icons.arrow_drop_down,
-                                                    color: Colors.black87),
-                                              ],
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Date & Time',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
                                             ),
-                                            itemBuilder: (context) => const [
-                                              PopupMenuItem(
-                                                value: 'today',
-                                                child: Text('Today'),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'week',
-                                                child: Text('This Week'),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'month',
-                                                child: Text('This Month'),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'all',
-                                                child: Text('All'),
-                                              ),
-                                            ],
                                           ),
-                                        ),
-                                      ],
+                                          Expanded(
+                                            flex: 1,
+                                            child: Text(
+                                              'Event',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
+                                    ListView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      padding:
+                                          const EdgeInsets.symmetric(horizontal: 16),
+                                      itemCount: displayedTransactions.length,
+                                      itemBuilder: (context, index) {
+                                        final transaction =
+                                            displayedTransactions[index];
+                                        return _TransactionItem(
+                                          coins: transaction['coins'].toString(),
+                                          date: transaction['date'],
+                                          time: transaction['time'],
+                                          event: transaction['event'],
+                                        );
+                                      },
+                                    ),
+                                    if (totalPagesTransactions > 1)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        child: _buildPagination(
+                                          currentPage: _currentPage,
+                                          totalPages: totalPagesTransactions,
+                                          onPageChanged: (page) {
+                                            setState(() {
+                                              _currentPage = page;
+                                            });
+                                          },
+                                        ),
+                                      ),
                                   ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 8),
-                                child: Row(
-                                  children: const [
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Number of Coins',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Date & Time',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 1,
-                                      child: Text(
-                                        'Event',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: displayedTransactions.length,
-                                itemBuilder: (context, index) {
-                                  final transaction =
-                                      displayedTransactions[index];
-                                  return _TransactionItem(
-                                    coins: transaction['coins'].toString(),
-                                    date: transaction['date'],
-                                    time: transaction['time'],
-                                    event: transaction['event'],
-                                  );
-                                },
-                              ),
-                              if (totalPagesTransactions > 1)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  child: _buildPagination(
-                                    currentPage: _currentPage,
-                                    totalPages: totalPagesTransactions,
-                                    onPageChanged: (page) {
-                                      setState(() {
-                                        _currentPage = page;
-                                      });
-                                    },
-                                  ),
                                 ),
 
                               const SizedBox(height: 24),
 
+                              // ---------------- Redeem History Header (similar style) ----------------
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 24, vertical: 8),
@@ -440,6 +473,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                     topRight: Radius.circular(30),
                                   ),
                                 ),
+                                // Add a row to hold the title + status filter
                                 child: Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
@@ -452,12 +486,14 @@ class _WalletScreenState extends State<WalletScreen> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
+                                    // Status filter for redemptions
                                     Container(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
+                                        borderRadius:
+                                            BorderRadius.circular(20),
                                       ),
                                       child: PopupMenuButton<String>(
                                         onSelected: _filterByStatus,
@@ -501,91 +537,108 @@ class _WalletScreenState extends State<WalletScreen> {
                                 ),
                               ),
 
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 24, vertical: 8),
-                                child: Row(
-                                  children: const [
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Redeemer',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Coupon',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Date & Time',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Status',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 15,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: displayedRedemptions.length,
-                                itemBuilder: (context, index) {
-                                  final redemption =
-                                      displayedRedemptions[index];
-                                  return _RedemptionItem(
-                                    member_name: redemption['name'],
-                                    coupon_name: redemption['coupon'],
-                                    date: redemption['date'] +
-                                        ' ' +
-                                        redemption['time'],
-                                    status: redemption['status'],
-                                  );
-                                },
-                              ),
-                              if (totalPagesRedemptions > 1)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  child: _buildPagination(
-                                    currentPage: _currentRedemptionPage,
-                                    totalPages: totalPagesRedemptions,
-                                    onPageChanged: (page) {
-                                      setState(() {
-                                        _currentRedemptionPage = page;
-                                      });
-                                    },
+                              // ---------------- Redeem History Table Header ----------------
+                              if (_redemptions.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Text(
+                                    'No redemption history available.',
+                                    style: TextStyle(color: Colors.white),
                                   ),
+                                )
+                              else
+                                Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 24, vertical: 8),
+                                      child: Row(
+                                        children: const [
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Redeemer',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Coupon',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Date & Time',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            flex: 2,
+                                            child: Text(
+                                              'Status',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // ---------------- Redeem History List ----------------
+                                    ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      itemCount: displayedRedemptions.length,
+                                      itemBuilder: (context, index) {
+                                        final redemption =
+                                            displayedRedemptions[index];
+                                        return _RedemptionItem(
+                                          member_name: redemption['name'],
+                                          coupon_name: redemption['coupon'],
+                                          date: redemption['date'] +
+                                              ' ' +
+                                              redemption['time'],
+                                          status: redemption['status'],
+                                        );
+                                      },
+                                    ),
+                                    if (totalPagesRedemptions > 1)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        child: _buildPagination(
+                                          currentPage:
+                                              _currentRedemptionPage,
+                                          totalPages: totalPagesRedemptions,
+                                          onPageChanged: (page) {
+                                            setState(() {
+                                              _currentRedemptionPage = page;
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                  ],
                                 ),
                             ],
                           ),
@@ -602,6 +655,9 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 }
 
+// ----------------------------------------------------------------
+// Transaction List Item
+// ----------------------------------------------------------------
 class _TransactionItem extends StatelessWidget {
   final String coins;
   final String date;
@@ -668,6 +724,9 @@ class _TransactionItem extends StatelessWidget {
   }
 }
 
+// ----------------------------------------------------------------
+// Redemption List Item
+// ----------------------------------------------------------------
 class _RedemptionItem extends StatelessWidget {
   final String member_name;
   final String coupon_name;
@@ -757,3 +816,4 @@ class _RedemptionItem extends StatelessWidget {
     );
   }
 }
+

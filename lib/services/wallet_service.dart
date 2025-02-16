@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class WalletApiService {
-  static const String baseUrl = 'https://velitt.digital/api/wallet.php';
-  static const String membersUrl = 'https://velitt.digital/api/members.php';
+  static const String baseUrl = 'http://localhost/api/wallet.php';
+  static const String membersUrl = 'http://localhost/api/members.php';
 
   // Fetch wallet balance
   static Future<Map<String, dynamic>> fetchBalance(int memberId) async {
@@ -56,14 +56,15 @@ class WalletApiService {
   // Update wallet balance
   static Future<Map<String, dynamic>> updateBalance(int memberId, double coins) async {
     final response = await http.put(
-      Uri.parse('$membersUrl/updateCoins'),
+      Uri.parse('$baseUrl/balance/$memberId'),
       headers: {'Content-Type': 'application/json'},
-      body: json.encode({'member_id': memberId, 'coins': coins}),
+      body: json.encode({'coins': coins}),
     );
 
     if (response.statusCode == 200) {
       return json.decode(response.body);
     } else {
+      print(response.body);
       throw Exception('Failed to update balance');
     }
   }

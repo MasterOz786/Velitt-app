@@ -51,20 +51,6 @@ class PasswordResetConfirmationScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const Spacer(flex: 2),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    // TODO: Implement restart logic
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    side: const BorderSide(color: Color(0xFFE31E24)),
-                  ),
-                  child: const Text('Restart App'),
-                ),
-              ),
             ],
           ),
         ),

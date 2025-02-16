@@ -1,12 +1,15 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:velitt/state/member_state.dart';
 import 'package:velitt/widgets/wallet_header.dart';
-import 'package:velitt/services/wallet_service.dart';
-import 'package:velitt/screens/coins_screen.dart';
 import 'package:velitt/services/coupon_service.dart';
-import 'package:logging/logging.dart';
 import 'package:velitt/widgets/bottom_navbar.dart';
+import 'package:logging/logging.dart';
+import 'package:excel/excel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:velitt/screens/coins_screen.dart';
 
 class CouponsScreen extends StatefulWidget {
   const CouponsScreen({super.key});
@@ -16,26 +19,11 @@ class CouponsScreen extends StatefulWidget {
 }
 
 class _CouponsScreenState extends State<CouponsScreen> {
-  double _balance = 0;
   bool _isLoading = true;
   List<dynamic> _coupons = [];
   String _errorMessage = '';
 
   final Logger _logger = Logger('CouponsScreen');
-
-  void _handleNavigation(BuildContext context, int index) {
-    switch (index) {
-      case 0:
-        Navigator.pushReplacementNamed(context, '/home');
-        break;
-      case 1:
-        Navigator.pushReplacementNamed(context, '/dashboard');
-        break;
-      case 2:
-        Navigator.pushReplacementNamed(context, '/profile');
-        break;
-    }
-  }
 
   @override
   void initState() {
@@ -46,7 +34,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
   Future<void> _fetchCoupons() async {
     try {
       final coupons = await CouponApiService.fetchAllCoupons();
-      if (coupons == null || coupons.isEmpty) {
+      if (coupons.isEmpty) {
         setState(() {
           _errorMessage = 'No coupons available at the moment.';
           _isLoading = false;
@@ -66,7 +54,76 @@ class _CouponsScreenState extends State<CouponsScreen> {
     }
   }
 
-  void _navigateToRedemption(int couponId, String type) {
+  void _handleNavigation(int index) {
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/dashboard');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/profile');
+        break;
+    }
+  }
+
+  Future<void> _downloadExcel() async {
+    try {
+      var excel = Excel.createExcel();
+      Sheet sheetObject = excel['Coupons'];
+
+      CellStyle headerStyle = CellStyle(
+        backgroundColorHex: ExcelColor.fromHexString('#1AFF1A'),
+        fontFamily: getFontFamily(FontFamily.Calibri),
+        bold: true,
+      );
+
+      // Set headers
+      sheetObject.cell(CellIndex.indexByString("A1")).value = TextCellValue("Coupon Name");
+      sheetObject.cell(CellIndex.indexByString("B1")).value = TextCellValue("Type");
+      sheetObject.cell(CellIndex.indexByString("C1")).value = TextCellValue("Value");
+
+      // Apply header style
+      ['A1', 'B1', 'C1'].forEach((cellIndex) {
+        sheetObject.cell(CellIndex.indexByString(cellIndex)).cellStyle = headerStyle;
+      });
+
+      // Add coupon data
+      for (int i = 0; i < _coupons.length; i++) {
+        sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: i + 1)).value = TextCellValue(_coupons[i]['name']);
+        sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: i + 1)).value = TextCellValue(_coupons[i]['type']);
+        sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: i + 1)).value = TextCellValue(_coupons[i]['value'].toString());
+      }
+
+      final List<int>? fileBytes = excel.save();
+      if (fileBytes == null) throw Exception("Excel encoding failed");
+
+      final directory = await getApplicationDocumentsDirectory();
+      final String filePath = '${directory.path}/coupons.xlsx';
+      final File file = File(filePath)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fileBytes);
+
+      await Share.shareXFiles([XFile(filePath)], text: 'Coupons Excel File');
+    } catch (e) {
+      _logger.severe('Error creating or sharing Excel: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to export Excel: $e')),
+      );
+    }
+  }
+
+  void _handleCouponRedeem(Map<String, dynamic> coupon) {
+    if (coupon['type'].toString().toLowerCase() == 'coins') {
+      int couponId = int.tryParse(coupon['id'].toString()) ?? 0;
+      _navigateToCoinsScreen(couponId, coupon['type']);
+    } else {
+      _showCouponRedeemDialog(coupon);
+    }
+  }
+
+  void _navigateToCoinsScreen(int couponId, String type) {
     final memberState = Provider.of<MemberState>(context, listen: false);
     Navigator.push(
       context,
@@ -74,56 +131,13 @@ class _CouponsScreenState extends State<CouponsScreen> {
         builder: (context) => CoinRedemptionScreen(
           couponId: couponId,
           couponType: type,
-          balance: _balance,
+          balance: memberState.memberCoins,
           onRedeem: (coins) async {
-            try {
-              _logger.info('Redeeming $coins coins for coupon $couponId');
-              final response = await CouponApiService.redeemCoupon(
-                memberId: memberState.memberId,
-                couponId: couponId,
-                redeemType: type,
-                additionalData: {'coins': coins},
-              );
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      response['message'] ?? 'Coupon redeemed successfully.',
-                    ),
-                  ),
-                );
-                memberState.updateMember(
-                  id: response['user_id'],
-                  email: response['email'],
-                  name: response['username'],
-                  image: response['profile_picture'],
-                  coins: double.parse(response['coins']),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                        'Failed to redeem coupon. Please try again later.'),
-                  ),
-                );
-              }
-              _logger.severe('Error redeeming coupon', e);
-            }
+            // The actual redemption will happen in the CoinRedemptionScreen
           },
         ),
       ),
     );
-  }
-
-  void _handleCouponRedeem(Map<String, dynamic> coupon) {
-    if (coupon['type'].toString().toLowerCase() == 'coins') {
-      int couponId = int.tryParse(coupon['id'].toString()) ?? 0;
-      _navigateToRedemption(couponId, coupon['type']);
-    } else {
-      _showCouponRedeemDialog(coupon);
-    }
   }
 
   void _showCouponRedeemDialog(Map<String, dynamic> coupon) {
@@ -196,7 +210,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: () {
                 final Map<String, dynamic> additionalData = {};
 
                 switch (coupon['type']) {
@@ -217,107 +231,10 @@ class _CouponsScreenState extends State<CouponsScreen> {
                     break;
                 }
 
-                try {
-                  final memberState =
-                      Provider.of<MemberState>(context, listen: false);
-                  String redeemType;
-                  switch (coupon['type'].toString().toLowerCase()) {
-                    case 'phone number':
-                      redeemType = 'phone';
-                      break;
-                    case 'bank':
-                      redeemType = 'bank';
-                      break;
-                    case 'email':
-                      redeemType = 'email';
-                      break;
-                    case 'gift card':
-                      redeemType = 'gift-card';
-                      break;
-                    default:
-                      redeemType = 'coins';
-                      break;
-                  }
-                  final int couponId =
-                      int.tryParse(coupon['id'].toString()) ?? 0;
-                  final response = await CouponApiService.redeemCoupon(
-                    memberId: memberState.memberId,
-                    couponId: couponId,
-                    redeemType: redeemType,
-                    additionalData: additionalData,
-                  );
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          response['message'] ??
-                              'Coupon redeemed successfully.',
-                        ),
-                      ),
-                    );
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CoinRedemptionScreen(
-                          couponId: couponId,
-                          couponType: coupon['type'],
-                          balance: memberState.memberCoins,
-                          onRedeem: (coins) async {
-                            try {
-                              _logger.info(
-                                  'Redeeming $coins coins for coupon $couponId');
-                              final resp = await CouponApiService.redeemCoupon(
-                                memberId: memberState.memberId,
-                                couponId: couponId,
-                                redeemType: coupon['type'],
-                                additionalData: {'coins': coins},
-                              );
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      resp['message'] ??
-                                          'Coupon redeemed successfully.',
-                                    ),
-                                  ),
-                                );
-                                memberState.updateMember(
-                                  id: resp['user_id'],
-                                  email: resp['email'],
-                                  name: resp['username'],
-                                  image: resp['profile_picture'],
-                                  coins: double.parse(resp['coins']),
-                                );
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Failed to redeem coupon. Please try again later.'),
-                                  ),
-                                );
-                              }
-                              _logger.severe('Error redeeming coupon', e);
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                            'Failed to redeem coupon. Please try again later.'),
-                      ),
-                    );
-                  }
-                  _logger.severe('Error redeeming coupon', e);
-                }
+                Navigator.pop(context);
+                _navigateToCoinsScreen(int.parse(coupon['id']), coupon['type']);
               },
-              child: const Text('Request'),
+              child: const Text('Continue'),
             ),
           ],
         );
@@ -340,6 +257,27 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 Navigator.pushNamed(context, '/coupons');
               },
             ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Available Coupons',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.file_download, color: Colors.white),
+                    onPressed: _downloadExcel,
+                    tooltip: 'Download Coupons Excel',
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -353,11 +291,9 @@ class _CouponsScreenState extends State<CouponsScreen> {
                       : ListView(
                           padding: const EdgeInsets.all(16),
                           children: _coupons.map((coupon) {
-                            final couponMap =
-                                Map<String, dynamic>.from(coupon);
+                            final couponMap = Map<String, dynamic>.from(coupon);
                             return _CouponCard(
-                              logo:
-                                  'assets/images/coupons/${couponMap['picture']}',
+                              logo: 'assets/images/coupons/${couponMap['picture']}',
                               name: couponMap['name'],
                               onRedeem: () => _handleCouponRedeem(couponMap),
                             );
@@ -369,7 +305,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
       ),
       bottomNavigationBar: BottomNavBar(
         currentIndex: 0,
-        onTap: (index) => _handleNavigation(context, index),
+        onTap: _handleNavigation,
       ),
     );
   }
@@ -381,11 +317,11 @@ class _CouponCard extends StatelessWidget {
   final VoidCallback onRedeem;
 
   const _CouponCard({
-    super.key,
+    Key? key,
     required this.logo,
     required this.name,
     required this.onRedeem,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -393,15 +329,31 @@ class _CouponCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black,
+        color: Colors.grey[900],
         borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Image.asset(
             logo,
-            height: 40,
+            height: 60,
             fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
           ElevatedButton(
@@ -414,9 +366,9 @@ class _CouponCard extends StatelessWidget {
               ),
             ),
             child: const Text(
-              'Request Coupon',
+              'Redeem Coupon',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
